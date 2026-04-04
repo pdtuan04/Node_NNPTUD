@@ -61,6 +61,16 @@ const BookingManagement = () => {
     const [slotError, setSlotError] = useState(null);
     const [addPetError, setAddPetError] = useState(null);
 
+    // HÀM BẢO BỐI: Tự động lấy Token từ Local Storage gắn vào Header
+    const getAuthHeaders = () => {
+        const userStorage = JSON.parse(localStorage.getItem("user") || "{}");
+        const token = userStorage?.token || "";
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+    };
+
     function getMonday(date) {
         const d = new Date(date);
         const day = d.getDay();
@@ -130,7 +140,9 @@ const BookingManagement = () => {
         try {
             setLoading(true);
             const startDate = formatDateForAPI(selectedWeekStart);
-            const response = await fetch(`${BACKEND_URL}/bookings/week?startDate=${startDate}`, { credentials: 'include' });
+            const response = await fetch(`${BACKEND_URL}/bookings/week?startDate=${startDate}`, { 
+                headers: getAuthHeaders() 
+            });
             if (response.ok) { 
                 const result = await response.json(); 
                 setBookings(result || []); 
@@ -147,7 +159,9 @@ const BookingManagement = () => {
         if (!searchEmail) return;
         try {
             setSearchingUser(true); setUserSearchError(null); setFoundUser(null);
-            const response = await fetch(`${BACKEND_URL}/users/search?email=${searchEmail}`);
+            const response = await fetch(`${BACKEND_URL}/users/search?email=${searchEmail}`, {
+                headers: getAuthHeaders()
+            });
             const result = await response.json();
             
             if (response.ok && result.success) {
@@ -166,7 +180,7 @@ const BookingManagement = () => {
     const fetchBookingByCode = async (code) => {
         try {
             setIsScanningAPI(true);
-            const response = await fetch(`${BACKEND_URL}/bookings/code/${code}`, { credentials: 'include' });
+            const response = await fetch(`${BACKEND_URL}/bookings/code/${code}`, { headers: getAuthHeaders() });
             const result = await response.json();
             
             if (response.ok && result.success && result.data) {
@@ -186,7 +200,7 @@ const BookingManagement = () => {
     const handleBookingClick = async (bookingId) => {
         try {
             setShowBookingListPopup(false);
-            const response = await fetch(`${BACKEND_URL}/bookings/${bookingId}`, { credentials: 'include' });
+            const response = await fetch(`${BACKEND_URL}/bookings/${bookingId}`, { headers: getAuthHeaders() });
             if (response.ok) {
                 const result = await response.json();
                 if (result.data || result) { 
@@ -204,7 +218,10 @@ const BookingManagement = () => {
     const handleUpdateStatus = async (action) => {
         try {
             setUpdatingStatus(true);
-            const response = await fetch(`${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}/${action}`, { method: 'PUT', credentials: 'include' });
+            const response = await fetch(`${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}/${action}`, { 
+                method: 'PUT', 
+                headers: getAuthHeaders() 
+            });
             const result = await response.json();
             
             if (response.ok) {
@@ -226,9 +243,8 @@ const BookingManagement = () => {
             setUpdatingStatus(true);
             const response = await fetch(`${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}/complete`, { 
                 method: 'PUT', 
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ paymentMethod: selectedPaymentMethod }),
-                credentials: 'include' 
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ paymentMethod: selectedPaymentMethod })
             });
             const result = await response.json();
             
@@ -251,7 +267,10 @@ const BookingManagement = () => {
         if (!window.confirm('Bạn có chắc chắn muốn HỦY/XÓA lịch hẹn này không?')) return;
         try {
             setIsDeleting(true);
-            const response = await fetch(`${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}`, { method: 'DELETE', credentials: 'include' });
+            const response = await fetch(`${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}`, { 
+                method: 'DELETE', 
+                headers: getAuthHeaders() 
+            });
             if (response.ok) {
                 showToastMsg('Đã xóa thành công', 'success'); 
                 setShowDetailModal(false); 
@@ -270,7 +289,7 @@ const BookingManagement = () => {
     const fetchUserPets = async (userId) => {
         try {
             setLoadingPets(true); 
-            const response = await fetch(`${BACKEND_URL}/pets/user/${userId}`);
+            const response = await fetch(`${BACKEND_URL}/pets/user/${userId}`, { headers: getAuthHeaders() });
             const result = await response.json();
             if (response.ok) setPets(result.data || result);
         } catch (err) { } finally { setLoadingPets(false); }
@@ -279,7 +298,7 @@ const BookingManagement = () => {
     const fetchPetTypes = async () => {
         try {
             setLoadingPetTypes(true);
-            const response = await fetch(`${BACKEND_URL}/pet-types`);
+            const response = await fetch(`${BACKEND_URL}/pet-types`, { headers: getAuthHeaders() });
             const result = await response.json();
             if (response.ok) setPetTypes(result.data || result);
         } catch (err) { } finally { setLoadingPetTypes(false); }
@@ -288,7 +307,7 @@ const BookingManagement = () => {
     const fetchServicesByPetType = async (petTypeId) => {
         try {
             setLoadingServices(true); setServiceError(null);
-            const response = await fetch(`${BACKEND_URL}/services/pet-type/${petTypeId}`);
+            const response = await fetch(`${BACKEND_URL}/services/pet-type/${petTypeId}`, { headers: getAuthHeaders() });
             if (!response.ok) throw new Error('Không tải được dịch vụ.');
             const data = await response.json();
             setServices(data.data || data); 
@@ -304,7 +323,7 @@ const BookingManagement = () => {
         try {
             setLoadingSlots(true); setSlotError(null);
             const totalDuration = selectedServices.reduce((sum, service) => sum + service.durationInMinutes, 0);
-            const response = await fetch(`${BACKEND_URL}/bookings/available-slots?date=${newBookingDate}&duration=${totalDuration}`);
+            const response = await fetch(`${BACKEND_URL}/bookings/available-slots?date=${newBookingDate}&duration=${totalDuration}`, { headers: getAuthHeaders() });
             const result = await response.json();
             if (response.ok) {
                 setAvailableSlots(result.data || result);
@@ -327,7 +346,10 @@ const BookingManagement = () => {
         
         if (pId) {
             const pet = pets.find(p => String(p._id || p.id) === String(pId));
-            if (pet && pet.petType) fetchServicesByPetType(pet.petType);
+            if (pet && pet.petType) {
+                const typeId = pet.petType._id || pet.petType.id || pet.petType;
+                fetchServicesByPetType(typeId);
+            }
         } else {
             setServices([]);
         }
@@ -341,7 +363,6 @@ const BookingManagement = () => {
         setSelectedServices([]); setSelectedPet(''); setNewBookingDate(''); setSelectedSlot(null); setNotes('');
     };
 
-    // ĐÃ THÊM HÀM NÀY
     const handleOpenAddPetModal = () => { 
         setShowAddPetModal(true); 
         fetchPetTypes(); 
@@ -355,7 +376,7 @@ const BookingManagement = () => {
         setFoundUser({ id: userId, username: selectedBooking.user?.username });
         
         try {
-            const petsRes = await fetch(`${BACKEND_URL}/pets/user/${userId}`);
+            const petsRes = await fetch(`${BACKEND_URL}/pets/user/${userId}`, { headers: getAuthHeaders() });
             const petsData = await petsRes.json();
             const allPets = petsData.data || petsData;
             setPets(allPets);
@@ -366,7 +387,8 @@ const BookingManagement = () => {
             const currentPet = allPets.find(p => String(p._id || p.id) === String(petId));
             let allServices = [];
             if (currentPet && currentPet.petType) {
-                const srvRes = await fetch(`${BACKEND_URL}/products/category/${currentPet.petType}`);
+                const typeId = currentPet.petType._id || currentPet.petType.id || currentPet.petType;
+                const srvRes = await fetch(`${BACKEND_URL}/services/pet-type/${typeId}`, { headers: getAuthHeaders() });
                 const srvData = await srvRes.json();
                 allServices = srvData.data || srvData;
                 setServices(allServices);
@@ -395,7 +417,7 @@ const BookingManagement = () => {
             setAddingPet(true); setAddPetError(null);
             const response = await fetch(`${BACKEND_URL}/pets`, {
                 method: 'POST', 
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ name: newPet.name, petType: newPet.petTypeId, age: parseInt(newPet.age), user: foundUser._id || foundUser.id })
             });
             const result = await response.json();
@@ -420,15 +442,14 @@ const BookingManagement = () => {
             const url = isEditMode ? `${BACKEND_URL}/bookings/${selectedBooking._id || selectedBooking.id}` : `${BACKEND_URL}/bookings`;
             const method = isEditMode ? 'PUT' : 'POST';
 
-            const userStorage = JSON.parse(localStorage.getItem("user"));
-            const token = userStorage?.token || "";
+            const formattedScheduleTime = new Date(selectedSlot.startAt).toISOString();
 
             const response = await fetch(url, {
                 method: method, 
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ 
-                    scheduledAt: selectedSlot.startAt, 
-                    notes: notes, 
+                    scheduledAt: formattedScheduleTime, 
+                    notes: notes || "", 
                     petId: selectedPet, 
                     services: selectedServices.map(s => s._id || s.id) 
                 })
@@ -451,7 +472,7 @@ const BookingManagement = () => {
             setConfirming(true);
             const response = await fetch(`${BACKEND_URL}/bookings/${newBookingResult._id || newBookingResult.id}/confirm`, { 
                 method: 'PUT',
-                headers: { 'Authorization': `Bearer ${JSON.parse(localStorage.getItem("user"))?.token}` }
+                headers: getAuthHeaders()
             });
             
             if (!response.ok) throw new Error("Lỗi xác nhận");
@@ -905,6 +926,7 @@ const BookingManagement = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
                                                 <div className="mb-4">
                                                     <label className="form-label fw-bold text-secondary">2. Dịch vụ Spa <span className="text-danger">*</span></label>
                                                     {!selectedPet ? (

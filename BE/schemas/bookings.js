@@ -30,7 +30,7 @@ let bookingSchema = new mongoose.Schema({
             "PENDING_PAYMENT", 
             "CONFIRMED", 
             "IN_PROGRESS", 
-            "COMPLETED", 
+            "COMPLETED",
             "CANCELLED", 
             "NO_SHOW"
         ],
@@ -50,6 +50,13 @@ let bookingSchema = new mongoose.Schema({
         ref: 'pet', 
         required: [true, "Thông tin thú cưng là bắt buộc"]
     },
+    services: [{
+        service: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'service' 
+        },
+        priceAtTime: Number
+    }],
     isDeleted: {
         type: Boolean,
         default: false

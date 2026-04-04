@@ -31,9 +31,20 @@ module.exports = {
         }
         return true;
     },
-
+    GetBookingDetailByCode: async function (code) {
+        try {
+            return await bookingModel.findOne({ 
+                bookingCode: code, 
+                isDeleted: false 
+            }).populate(['user', 'pet', 'services.service']);
+        } catch (error) {
+            return false;
+        }
+    },
     CreateBooking: async function (userId, petId, serviceIds, scheduledAtString, notes) {
         try {
+            console.log("=== BẮT ĐẦU TẠO LỊCH HẸN ===");
+            console.log("Dữ liệu nhận được:", { userId, petId, serviceIds, scheduledAtString, notes });
             let scheduledAt = new Date(scheduledAtString);
             if (scheduledAt <= new Date()) return false;
 
@@ -152,7 +163,25 @@ module.exports = {
             return [];
         }
     },
+    GetAllBookingsInWeek: async function (startDateString) {
+        try {
+            let startOfWeek = new Date(startDateString);
+            startOfWeek.setHours(0, 0, 0, 0);
 
+            let endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+            let bookings = await bookingModel.find({
+                scheduledAt: { $gte: startOfWeek, $lt: endOfWeek },
+                bookingStatus: { $ne: "CANCELLED" },
+                isDeleted: false
+            }).populate('user').populate('pet').populate('services.service');
+
+            return bookings;
+        } catch (error) {
+            return [];
+        }
+    },
     GetAvailableBookingSlots: async function (durationInMinutes, selectedDayString) {
         try {
             let startOfDayQuery = new Date(selectedDayString);
