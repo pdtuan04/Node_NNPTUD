@@ -116,6 +116,15 @@ module.exports = {
 
             booking.bookingStatus = 'CONFIRMED';
             await booking.save();
+            if (agenda && booking.user && booking.user.email) {
+                let timeString = new Date(booking.scheduledAt).toLocaleString('vi-VN');
+                console.log("Lên lịch gửi email xác nhận cho:", booking.user.email);
+                await agenda.now('sendBookingEmailJob', {
+                    email: booking.user.email,
+                    bookingCode: booking.bookingCode,
+                    time: timeString
+                });
+            }
             return booking;
         } catch (error) {
             return false;

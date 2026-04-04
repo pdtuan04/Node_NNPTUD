@@ -1,5 +1,7 @@
 const { Agenda } = require('agenda');
 const { MongoBackend } = require('@agendajs/mongo-backend');
+const QRCode = require('qrcode');
+const { sendBookingEmail } = require('./sendMail');
 const bookingModel = require('../schemas/bookings');
 
 const agenda = new Agenda({
@@ -25,7 +27,16 @@ agenda.define('expiredBooking', async (job) => {
         console.log(error.message);
     }
 });
-
+agenda.define('sendBookingEmailJob', async (job) => {
+    const { email, bookingCode, time } = job.attrs.data;
+    try {
+        const qrBase64 = await QRCode.toDataURL(bookingCode);
+        await sendBookingEmail(email, bookingCode, qrBase64, time);
+        console.log("Done", email);
+    } catch (error) {
+        console.log("Lỗi", error.message);
+    }
+});
 const startBackgroundJobs = async () => {
     await agenda.start();
     console.log('Background Jobs (Agenda) started');

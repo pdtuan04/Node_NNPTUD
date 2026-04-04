@@ -60,8 +60,6 @@ const BookingManagement = () => {
     const [serviceError, setServiceError] = useState(null);
     const [slotError, setSlotError] = useState(null);
     const [addPetError, setAddPetError] = useState(null);
-
-    // HÀM BẢO BỐI: Tự động lấy Token từ Local Storage gắn vào Header
     const getAuthHeaders = () => {
         const userStorage = JSON.parse(localStorage.getItem("user") || "{}");
         const token = userStorage?.token || "";
@@ -447,7 +445,8 @@ const BookingManagement = () => {
             const response = await fetch(url, {
                 method: method, 
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ 
+                body: JSON.stringify({
+                    userId: foundUser._id || foundUser.id,
                     scheduledAt: formattedScheduleTime, 
                     notes: notes || "", 
                     petId: selectedPet, 
