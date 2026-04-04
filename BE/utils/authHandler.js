@@ -8,6 +8,7 @@ module.exports = {
                 token = req.cookies.TOKEN_NNPTUD_C3
             } else {
                 token = req.headers.authorization;
+                console.log("Token từ header:", token);
                 if (!token || !token.startsWith("Bearer")) {
                     res.status(403).send({ message: "ban chua dang nhap" })
                     return;

@@ -72,5 +72,17 @@ module.exports = {
         body('content')
             .notEmpty().withMessage("Nội dung bài viết không được để trống"),
         body('imageUrl.*').isURL().withMessage("URL khong hop le"),
+    ],
+    CreateBookingValidator: [
+        body('petId')
+            .notEmpty().withMessage("Thú cưng không được để trống")
+            .bail()
+            .isMongoId().withMessage("Mã thú cưng không hợp lệ"),
+        
+        body('services')
+            .isArray({ min: 1 }).withMessage("Phải chọn ít nhất 1 dịch vụ"),
+
+        body('scheduledAt')
+            .notEmpty().withMessage("Thời gian đặt lịch không được để trống")
     ]
 }

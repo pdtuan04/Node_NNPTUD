@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { GoogleLogin } from "@react-oauth/google";
 import { getRoleFromToken } from "../../utils/jwtHelper";
+import { jwtDecode } from "jwt-decode";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -22,33 +23,43 @@ function LoginPage() {
     if (response.ok) {
       try {
         const result = await response.json();
-        const data = result?.data ?? result;
+        
+        // Backend trả về { success: true, data: { token: "..." } }
+        const token = result?.data?.token || result?.token;
 
-        if (data && data.token) {
-          
-          const finalRole = data.role || getRoleFromToken(data.token);
+        if (token) {
+          // Giải mã token để lấy thông tin user
+          const decodedToken = jwtDecode(token);
+          const finalRole = decodedToken.role || "USER";
 
+          // Lưu vào Context & LocalStorage
           login({
-            userId: data.id || data.userId,
-            username: data.username,
-            email: data.email,
+            userId: decodedToken.id,
+            username: decodedToken.username,
+            email: decodedToken.email,
             role: finalRole,
-            token: data.token,
+            token: token,
           });
 
-          if (finalRole?.toLowerCase() === "admin") {
+          if (finalRole?.toUpperCase() === "ADMIN") {
             navigate("/admin", { replace: true });
           } else {
             navigate(from || "/", { replace: true });
           }
         } else {
-          alert("Không nhận được dữ liệu đăng nhập");
+          alert("Không nhận được Token từ Server");
         }
       } catch (error) {
-        alert("Lỗi xử lý dữ liệu");
+        alert("Lỗi phân tích dữ liệu đăng nhập");
       }
     } else {
-      alert("Đăng nhập thất bại");
+      // Backend trả về string hoặc json khi lỗi 404
+      try {
+        const errText = await response.text();
+        alert(`Đăng nhập thất bại: ${errText}`);
+      } catch(e) {
+        alert("Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.");
+      }
     }
     setLoading(false);
   };
@@ -59,7 +70,7 @@ function LoginPage() {
       const res = await fetch("http://localhost:8080/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // Cực kỳ quan trọng để lưu Cookie
         body: JSON.stringify({ token: credentialResponse.credential }),
       });
       await handleLoginSuccess(res);
@@ -76,6 +87,7 @@ function LoginPage() {
       const res = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include", // Cực kỳ quan trọng để lưu Cookie
         body: JSON.stringify({ username: form.username, password: form.password }),
       });
       await handleLoginSuccess(res);
