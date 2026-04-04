@@ -10,9 +10,9 @@ var usersRouter = require('./routes/users');
 let { agenda, startBackgroundJobs } = require('./utils/backgroundHandler');
 var app = express();
 app.use(cors({
-    origin: 'https://localhost:5173',
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+  origin: 'https://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  credentials: true
 }));
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -39,24 +39,24 @@ app.use('/api/v1/bookings', require('./routes/bookings'));
 app.use('/api/v1/pets', require('./routes/pets'));
 app.use('/api/v1/services', require('./routes/services'));
 app.use('/api/v1/pet-types', require('./routes/petTypes'));
-mongoose.connect('mongodb://localhost:27017/NNPTUD-C3');
-mongoose.connection.on('connected',()=>{
+mongoose.connect('mongodb://localhost:27017/NNPTUD-C3?replicaSet=rs0');
+mongoose.connection.on('connected', () => {
   console.log("connected");
   startBackgroundJobs();
 })
 
-mongoose.connection.on('disconnected',()=>{
+mongoose.connection.on('disconnected', () => {
   console.log("disconnected");
 })
 
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
