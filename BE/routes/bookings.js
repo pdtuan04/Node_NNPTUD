@@ -43,8 +43,9 @@ router.get("/:id", async function (req, res) {
 });
 
 router.post("/", CheckLogin, CreateBookingValidator, validatedResult, async function (req, res) {
+    let targetUserId = req.body.userId ? req.body.userId : req.user.id;
     let booking = await bookingController.CreateBooking(
-        req.user.id,
+        targetUserId,
         req.body.petId,
         req.body.services,
         req.body.scheduledAt,
