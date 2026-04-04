@@ -78,5 +78,24 @@ router.delete("/:id", CheckLogin, async function (req, res) {
     if (!success) return res.status(400).send({ message: "Không thể xóa" });
     res.send({ message: "Xóa thành công" });
 });
+router.put("/:id", CheckLogin, async function (req, res) {
+    try {
+        let targetUserId = req.body.userId ? req.body.userId : req.user.id;
+        let updatedBooking = await bookingController.UpdateBooking(
+            req.params.id,
+            targetUserId,
+            req.body.petId,
+            req.body.services,
+            req.body.scheduledAt,
+            req.body.notes
+        );
 
+        if (!updatedBooking) {
+            return res.status(400).send({ message: "Lỗi cập nhật lịch hẹn (Có thể do trùng giờ hoặc dữ liệu sai)" });
+        }
+        res.send({ success: true, data: updatedBooking }); 
+    } catch (err) {
+        res.status(400).send({ message: err.message });
+    }
+});
 module.exports = router;
