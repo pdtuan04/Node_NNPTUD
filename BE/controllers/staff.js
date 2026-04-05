@@ -179,6 +179,7 @@ module.exports = {
       return {
         ...rest,
         id: _id.toString(),
+        isDeleted: rest.isDeleted || false,
       };
     });
 
@@ -193,7 +194,7 @@ module.exports = {
 
   GetStaffById: async function (id) {
     const staff = await staffModel
-      .findOne({ _id: id, isDeleted: false })
+      .findOne({ _id: id })
       .populate("userId", "username")
       .lean();
 
@@ -215,6 +216,7 @@ module.exports = {
       specialization: staff.specialization,
       profilePictureUrl: staff.profilePictureUrl,
       isActive: staff.isActive,
+      isDeleted: staff.isDeleted || false,
       username: staff.userId ? staff.userId.username : null,
       createdAt: staff.createdAt,
       updatedAt: staff.updatedAt,
@@ -306,5 +308,46 @@ module.exports = {
       isActive: true,
       isDeleted: false,
     });
+  },
+
+  GetDeletedStaff: async function (pageNumber, pageSize) {
+    const skip = (pageNumber - 1) * pageSize;
+    const query = { isDeleted: true };
+
+    const totalCount = await staffModel.countDocuments(query);
+    const items = await staffModel
+      .find(query)
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
+      .lean();
+
+    const mappedItems = items.map((item) => {
+      const { _id, ...rest } = item;
+      return {
+        ...rest,
+        id: _id.toString(),
+      };
+    });
+
+    return {
+      items: mappedItems,
+      totalCount: totalCount,
+      pageNumber: pageNumber,
+      pageSize: pageSize,
+      totalPages: Math.ceil(totalCount / pageSize),
+    };
+  },
+
+  RestoreStaff: async function (id) {
+    const staff = await staffModel.findOne({ _id: id, isDeleted: true });
+    if (!staff) {
+      throw new Error("Không tìm thấy nhân viên trong thùng rác");
+    }
+
+    staff.isDeleted = false;
+    await staff.save();
+
+    return staff;
   },
 };

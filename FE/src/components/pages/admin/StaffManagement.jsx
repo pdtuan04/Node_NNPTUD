@@ -19,6 +19,7 @@ const StaffManagement = () => {
   const [searchInput, setSearchInput] = useState("");
   const [sortBy, setSortBy] = useState("fullName");
   const [sortDir, setSortDir] = useState("Ascending");
+  const [activeTab, setActiveTab] = useState("active");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -60,20 +61,27 @@ const StaffManagement = () => {
 
   useEffect(() => {
     fetchStaff();
-  }, [pageNumber, pageSize, search, sortBy, sortDir]);
+  }, [pageNumber, pageSize, search, sortBy, sortDir, activeTab]);
 
   const fetchStaff = async () => {
     try {
       setLoading(true);
+      let url;
       const params = new URLSearchParams({
         pageNumber: pageNumber,
         pageSize: pageSize,
-        sortBy: sortBy,
-        sortDir: sortDir,
       });
-      if (search) params.append("search", search);
 
-      const response = await fetch(`/api/staff/paginated?${params}`, {
+      if (activeTab === "deleted") {
+        url = `/api/staff/deleted?${params}`;
+      } else {
+        params.append("sortBy", sortBy);
+        params.append("sortDir", sortDir);
+        if (search) params.append("search", search);
+        url = `/api/staff/paginated?${params}`;
+      }
+
+      const response = await fetch(url, {
         credentials: "include",
       });
 
@@ -315,6 +323,30 @@ const StaffManagement = () => {
     });
   };
 
+  const handleRestore = (staffMember) => {
+    showConfirm("Bạn có chắc muốn khôi phục nhân viên này?", async () => {
+      try {
+        const response = await fetch(
+          `/api/staff/restore?id=${staffMember.id}`,
+          {
+            method: "PATCH",
+            credentials: "include",
+          },
+        );
+        const result = await response.json();
+        if (response.ok && result.success) {
+          showToast(result.message, "success");
+          fetchStaff();
+        } else {
+          showToast(result.message || "Không thể khôi phục!", "error");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        showToast("Có lỗi xảy ra!", "error");
+      }
+    });
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
   const startRecord = totalCount === 0 ? 0 : (pageNumber - 1) * pageSize + 1;
   const endRecord = Math.min(pageNumber * pageSize, totalCount);
@@ -380,55 +412,106 @@ const StaffManagement = () => {
         </li>
         <li className="breadcrumb-item active">Nhân viên</li>
       </ol>
-      <button className="btn btn-primary btn-sm mb-3" onClick={handleAddNew}>
-        <i className="fas fa-plus me-2"></i>Thêm nhân viên
-      </button>
+
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <button
+            className={`btn btn-sm me-2 ${activeTab === "active" ? "btn-primary" : "btn-outline-primary"}`}
+            onClick={() => {
+              setActiveTab("active");
+              setPageNumber(1);
+              setSearch("");
+              setSearchInput("");
+            }}
+          >
+            <i className="fas fa-users me-2"></i>Nhân viên hoạt động
+          </button>
+          <button
+            className={`btn btn-sm ${activeTab === "deleted" ? "btn-danger" : "btn-outline-danger"}`}
+            onClick={() => {
+              setActiveTab("deleted");
+              setPageNumber(1);
+              setSearch("");
+              setSearchInput("");
+            }}
+          >
+            <i className="fas fa-trash me-2"></i>Thùng rác
+          </button>
+        </div>
+        {activeTab === "active" && (
+          <button className="btn btn-primary btn-sm" onClick={handleAddNew}>
+            <i className="fas fa-plus me-2"></i>Thêm nhân viên
+          </button>
+        )}
+      </div>
 
       <div className="card mb-4">
         <div className="card-header">
           <i className="fas fa-users me-1"></i>Danh sách nhân viên
         </div>
         <div className="card-body">
-          <div className="row mb-3">
-            <div className="col-md-3">
-              <select
-                className="form-select"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPageNumber(1);
-                }}
-              >
-                <option value="5">5 dòng/trang</option>
-                <option value="10">10 dòng/trang</option>
-                <option value="25">25 dòng/trang</option>
-                <option value="50">50 dòng/trang</option>
-              </select>
-            </div>
-            <div className="col-md-9">
-              <form onSubmit={handleSearch} className="d-flex">
-                <input
-                  type="text"
-                  className="form-control me-2"
-                  placeholder="Tìm kiếm theo tên, email, SĐT..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
-                <button type="submit" className="btn btn-primary me-2">
-                  <i className="fas fa-search"></i>
-                </button>
-                {search && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleClearSearch}
-                  >
-                    <i className="fas fa-times"></i>
+          {activeTab === "active" && (
+            <div className="row mb-3">
+              <div className="col-md-3">
+                <select
+                  className="form-select"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                  }}
+                >
+                  <option value="5">5 dòng/trang</option>
+                  <option value="10">10 dòng/trang</option>
+                  <option value="25">25 dòng/trang</option>
+                  <option value="50">50 dòng/trang</option>
+                </select>
+              </div>
+              <div className="col-md-9">
+                <form onSubmit={handleSearch} className="d-flex">
+                  <input
+                    type="text"
+                    className="form-control me-2"
+                    placeholder="Tìm kiếm theo tên, email, SĐT..."
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                  />
+                  <button type="submit" className="btn btn-primary me-2">
+                    <i className="fas fa-search"></i>
                   </button>
-                )}
-              </form>
+                  {search && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={handleClearSearch}
+                    >
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
+                </form>
+              </div>
             </div>
-          </div>
+          )}
+
+          {activeTab === "deleted" && (
+            <div className="row mb-3">
+              <div className="col-md-3">
+                <select
+                  className="form-select"
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPageNumber(1);
+                  }}
+                >
+                  <option value="5">5 dòng/trang</option>
+                  <option value="10">10 dòng/trang</option>
+                  <option value="25">25 dòng/trang</option>
+                  <option value="50">50 dòng/trang</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-5">
@@ -443,22 +526,30 @@ const StaffManagement = () => {
                   <tr>
                     <th style={{ width: "80px" }}>Ảnh</th>
                     <th
-                      onClick={() => handleSort("staffCode")}
-                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        activeTab === "active" && handleSort("staffCode")
+                      }
+                      style={{
+                        cursor: activeTab === "active" ? "pointer" : "default",
+                      }}
                     >
                       Mã NV{" "}
-                      {sortBy === "staffCode" && (
+                      {activeTab === "active" && sortBy === "staffCode" && (
                         <i
                           className={`fas fa-sort-${sortDir === "Ascending" ? "up" : "down"} ms-1`}
                         ></i>
                       )}
                     </th>
                     <th
-                      onClick={() => handleSort("fullName")}
-                      style={{ cursor: "pointer" }}
+                      onClick={() =>
+                        activeTab === "active" && handleSort("fullName")
+                      }
+                      style={{
+                        cursor: activeTab === "active" ? "pointer" : "default",
+                      }}
                     >
                       Họ tên{" "}
-                      {sortBy === "fullName" && (
+                      {activeTab === "active" && sortBy === "fullName" && (
                         <i
                           className={`fas fa-sort-${sortDir === "Ascending" ? "up" : "down"} ms-1`}
                         ></i>
@@ -468,8 +559,14 @@ const StaffManagement = () => {
                     <th>SĐT</th>
                     <th>Phòng ban</th>
                     <th>Chức vụ</th>
-                    <th>Trạng thái</th>
-                    <th style={{ width: "180px" }}>Thao tác</th>
+                    {activeTab === "active" && <th>Trạng thái</th>}
+                    <th
+                      style={{
+                        width: activeTab === "deleted" ? "120px" : "180px",
+                      }}
+                    >
+                      Thao tác
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -511,44 +608,67 @@ const StaffManagement = () => {
                         <td>{s.phoneNumber || "-"}</td>
                         <td>{s.department || "-"}</td>
                         <td>{s.position || "-"}</td>
+                        {activeTab === "active" && (
+                          <td>
+                            <span
+                              className={`badge ${s.isActive ? "bg-success" : "bg-secondary"}`}
+                            >
+                              {s.isActive ? "Hoạt động" : "Không hoạt động"}
+                            </span>
+                          </td>
+                        )}
                         <td>
-                          <span
-                            className={`badge ${s.isActive ? "bg-success" : "bg-secondary"}`}
-                          >
-                            {s.isActive ? "Hoạt động" : "Không hoạt động"}
-                          </span>
-                        </td>
-                        <td>
-                          <button
-                            className="btn btn-info btn-sm me-1"
-                            onClick={() => handleView(s.id)}
-                            title="Xem chi tiết"
-                          >
-                            <i className="fas fa-eye"></i>
-                          </button>
-                          <button
-                            className="btn btn-warning btn-sm me-1"
-                            onClick={() => handleEdit(s)}
-                            title="Chỉnh sửa"
-                          >
-                            <i className="fas fa-edit"></i>
-                          </button>
-                          <button
-                            className={`btn btn-sm me-1 ${s.isActive ? "btn-danger" : "btn-success"}`}
-                            onClick={() => handleToggleActive(s)}
-                            title={s.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
-                          >
-                            <i
-                              className={`fas fa-${s.isActive ? "ban" : "check"}`}
-                            ></i>
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(s)}
-                            title="Xóa"
-                          >
-                            <i className="fas fa-trash"></i>
-                          </button>
+                          {activeTab === "active" ? (
+                            <>
+                              <button
+                                className="btn btn-info btn-sm me-1"
+                                onClick={() => handleView(s.id)}
+                                title="Xem chi tiết"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button
+                                className="btn btn-warning btn-sm me-1"
+                                onClick={() => handleEdit(s)}
+                                title="Chỉnh sửa"
+                              >
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              <button
+                                className={`btn btn-sm me-1 ${s.isActive ? "btn-danger" : "btn-success"}`}
+                                onClick={() => handleToggleActive(s)}
+                                title={s.isActive ? "Vô hiệu hóa" : "Kích hoạt"}
+                              >
+                                <i
+                                  className={`fas fa-${s.isActive ? "ban" : "check"}`}
+                                ></i>
+                              </button>
+                              <button
+                                className="btn btn-danger btn-sm"
+                                onClick={() => handleDelete(s)}
+                                title="Xóa"
+                              >
+                                <i className="fas fa-trash"></i>
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-info btn-sm me-1"
+                                onClick={() => handleView(s.id)}
+                                title="Xem chi tiết"
+                              >
+                                <i className="fas fa-eye"></i>
+                              </button>
+                              <button
+                                className="btn btn-success btn-sm"
+                                onClick={() => handleRestore(s)}
+                                title="Khôi phục"
+                              >
+                                <i className="fas fa-undo"></i>
+                              </button>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))
