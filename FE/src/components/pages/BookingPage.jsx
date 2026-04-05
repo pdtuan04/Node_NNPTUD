@@ -80,7 +80,7 @@ const BookingPage = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/api/service");
+      const response = await fetch("http://localhost:8080/api/v1/services");
       if (!response.ok) throw new Error("Không thể tải danh sách dịch vụ");
       const result = await response.json();
       if (result.success) {
@@ -107,7 +107,11 @@ const BookingPage = () => {
       }
       const response = await fetch(
         `http://localhost:8080/api/pet/user/${currentUserId}`,
-        { method: "GET", credentials: "include", headers: { "Content-Type": "application/json" } },
+        {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        },
       );
       if (!response.ok) throw new Error("Không thể tải danh sách thú cưng");
       const result = await response.json();
@@ -128,7 +132,8 @@ const BookingPage = () => {
     try {
       setLoadingPetTypes(true);
       const response = await fetch("http://localhost:8080/api/pet-type");
-      if (!response.ok) throw new Error("Không thể tải danh sách loại thú cưng");
+      if (!response.ok)
+        throw new Error("Không thể tải danh sách loại thú cưng");
       const result = await response.json();
       if (result.success) {
         setPetTypes(result.data);
@@ -172,10 +177,16 @@ const BookingPage = () => {
     try {
       setLoadingVouchers(true);
       setVoucherError(null);
-      const response = await fetch("http://localhost:8080/api/bookings/me/vouchers", {
-        method: "GET",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        "http://localhost:8080/api/bookings/me/vouchers",
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
       const result = await response.json().catch(() => null);
       if (!response.ok || !result?.success) {
         throw new Error(result?.message || "Không thể tải danh sách voucher");
@@ -230,7 +241,9 @@ const BookingPage = () => {
 
   const handleSubmitBooking = async () => {
     if (!selectedPet || selectedServices.length === 0 || !selectedSlot) {
-      setFormError("Vui lòng chọn đầy đủ thú cưng, dịch vụ và khung giờ trước khi đặt lịch.");
+      setFormError(
+        "Vui lòng chọn đầy đủ thú cưng, dịch vụ và khung giờ trước khi đặt lịch.",
+      );
       return;
     }
     setFormError(null);
@@ -277,7 +290,8 @@ const BookingPage = () => {
     try {
       setConfirming(true);
       const token = user?.token;
-      if (!token) throw new Error("Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.");
+      if (!token)
+        throw new Error("Phiên đăng nhập đã hết. Vui lòng đăng nhập lại.");
 
       const finalMethod =
         paymentCategory === "store" ? "PAY_LATER" : paymentMethod;
@@ -315,7 +329,9 @@ const BookingPage = () => {
       }
 
       setShowConfirmModal(false);
-      navigate(`/booking/details/${bookingResult.id}?fromPayment=0&method=PAY_LATER`);
+      navigate(
+        `/booking/details/${bookingResult.id}?fromPayment=0&method=PAY_LATER`,
+      );
     } catch (err) {
       alert("Lỗi xác nhận: " + err.message);
     } finally {
@@ -413,9 +429,7 @@ const BookingPage = () => {
   const isOnlinePayment =
     paymentMethod === "MOMO_PREPAID" || paymentMethod === "VNPAY_PREPAID";
 
-  const selectedVoucher = vouchers.find(
-    (v) => v.code === selectedVoucherCode,
-  );
+  const selectedVoucher = vouchers.find((v) => v.code === selectedVoucherCode);
   const voucherDiscountPreview =
     isOnlinePayment && paymentCategory === "online"
       ? Math.min(
@@ -434,9 +448,7 @@ const BookingPage = () => {
       <div className="container">
         {/* -------- Page Header -------- */}
         <div className="page-header">
-          <h2>
-             Đặt lịch chăm sóc thú cưng
-          </h2>
+          <h2>Đặt lịch chăm sóc thú cưng</h2>
           <p>Chọn dịch vụ và thời gian phù hợp cho bé cưng của bạn</p>
         </div>
 
@@ -454,7 +466,8 @@ const BookingPage = () => {
               {user ? (
                 <>
                   <div className="bp-autofill-badge">
-                    <i className="fas fa-check-circle"></i> Tự động điền từ tài khoản
+                    <i className="fas fa-check-circle"></i> Tự động điền từ tài
+                    khoản
                   </div>
                   <div className="row g-3">
                     <div className="col-md-4">
@@ -465,7 +478,6 @@ const BookingPage = () => {
                         readOnly
                       />
                     </div>
-                   
                   </div>
                 </>
               ) : (
@@ -501,7 +513,10 @@ const BookingPage = () => {
                 <div className="bp-alert bp-alert-danger">
                   <i className="fas fa-exclamation-circle"></i>
                   {petError}
-                  <button className="btn-sm-round ms-auto" onClick={fetchUserPets}>
+                  <button
+                    className="btn-sm-round ms-auto"
+                    onClick={fetchUserPets}
+                  >
                     <i className="fas fa-redo"></i> Thử lại
                   </button>
                 </div>
@@ -564,7 +579,8 @@ const BookingPage = () => {
                       <div className="pet-details">
                         <strong>{selectedPetInfo.name}</strong>
                         <span>
-                          {getPetTypeName(selectedPetInfo.petTypeId) || "Thú cưng"}{" "}
+                          {getPetTypeName(selectedPetInfo.petTypeId) ||
+                            "Thú cưng"}{" "}
                           &bull; {selectedPetInfo.age} tuổi
                         </span>
                       </div>
@@ -578,7 +594,6 @@ const BookingPage = () => {
             <div className="bp-section">
               <div className="bp-section-title">
                 <span className="bp-step">3</span>
-                
                 Chọn dịch vụ
                 {selectedServices.length > 0 && (
                   <span className="bp-badge bp-badge-primary ms-auto">
@@ -597,7 +612,10 @@ const BookingPage = () => {
                 <div className="bp-alert bp-alert-danger">
                   <i className="fas fa-exclamation-circle"></i>
                   {error}
-                  <button className="btn-sm-round ms-auto" onClick={fetchServices}>
+                  <button
+                    className="btn-sm-round ms-auto"
+                    onClick={fetchServices}
+                  >
                     <i className="fas fa-redo"></i> Thử lại
                   </button>
                 </div>
@@ -628,7 +646,9 @@ const BookingPage = () => {
                         {service.durationInMinutes} phút
                       </div>
                       {service.description && (
-                        <div className="service-desc">{service.description}</div>
+                        <div className="service-desc">
+                          {service.description}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -692,7 +712,10 @@ const BookingPage = () => {
               {/* Time Slots */}
               {selectedDate && selectedServices.length > 0 && (
                 <>
-                  <label className="bp-label" style={{ marginBottom: "0.5rem" }}>
+                  <label
+                    className="bp-label"
+                    style={{ marginBottom: "0.5rem" }}
+                  >
                     Khung giờ <span className="required">*</span>
                   </label>
 
@@ -875,8 +898,8 @@ const BookingPage = () => {
 
                     <div className="payment-note">
                       <i className="fas fa-info-circle"></i>
-                      Bạn sẽ được chuyển đến cổng thanh toán sau khi xác nhận đặt
-                      lịch.
+                      Bạn sẽ được chuyển đến cổng thanh toán sau khi xác nhận
+                      đặt lịch.
                     </div>
                   </>
                 )}
@@ -1071,11 +1094,11 @@ const BookingPage = () => {
 
       {/* ===================== ADD PET MODAL ===================== */}
       {showAddPetModal && (
-        <div className="bp-modal-overlay" onClick={() => setShowAddPetModal(false)}>
-          <div
-            className="bp-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div
+          className="bp-modal-overlay"
+          onClick={() => setShowAddPetModal(false)}
+        >
+          <div className="bp-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bp-modal-header">
               <h5>
                 <i className="fas fa-paw"></i> Thêm thú cưng mới
@@ -1247,8 +1270,8 @@ const BookingPage = () => {
                 <i className="fas fa-clock"></i>
                 <div>
                   <strong>Lưu ý:</strong> Hệ thống sẽ chờ bạn xác nhận trong
-                  vòng <strong>5 phút</strong>. Nếu quá thời gian, lịch hẹn sẽ bị
-                  hủy.
+                  vòng <strong>5 phút</strong>. Nếu quá thời gian, lịch hẹn sẽ
+                  bị hủy.
                 </div>
               </div>
 
@@ -1281,9 +1304,7 @@ const BookingPage = () => {
                   <tr>
                     <td className="info-label">Dịch vụ</td>
                     <td className="info-value">
-                      <ul
-                        style={{ margin: 0, paddingLeft: "1.1rem" }}
-                      >
+                      <ul style={{ margin: 0, paddingLeft: "1.1rem" }}>
                         {bookingResult.services.map((s, i) => (
                           <li key={i}>
                             {s.name} –{" "}
@@ -1340,7 +1361,10 @@ const BookingPage = () => {
               {paymentCategory === "online" && (
                 <div style={{ marginTop: "1rem" }}>
                   <label className="bp-label">
-                    <i className="fas fa-ticket-alt" style={{ color: "#2563eb" }}></i>{" "}
+                    <i
+                      className="fas fa-ticket-alt"
+                      style={{ color: "#2563eb" }}
+                    ></i>{" "}
                     Áp dụng voucher
                   </label>
                   {loadingVouchers ? (
@@ -1353,7 +1377,10 @@ const BookingPage = () => {
                       {voucherError && (
                         <div
                           className="text-danger"
-                          style={{ fontSize: "0.82rem", marginBottom: "0.35rem" }}
+                          style={{
+                            fontSize: "0.82rem",
+                            marginBottom: "0.35rem",
+                          }}
                         >
                           {voucherError}
                         </div>
@@ -1361,9 +1388,7 @@ const BookingPage = () => {
                       <select
                         className="bp-voucher-select"
                         value={selectedVoucherCode}
-                        onChange={(e) =>
-                          setSelectedVoucherCode(e.target.value)
-                        }
+                        onChange={(e) => setSelectedVoucherCode(e.target.value)}
                       >
                         <option value="">Không dùng voucher</option>
                         {vouchers.map((v) => (
@@ -1439,7 +1464,10 @@ const BookingPage = () => {
       {showSuccessModal && bookingResult && (
         <div className="bp-modal-overlay">
           <div className="bp-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="bp-modal-body text-center" style={{ padding: "2.5rem 1.5rem" }}>
+            <div
+              className="bp-modal-body text-center"
+              style={{ padding: "2.5rem 1.5rem" }}
+            >
               <div className="bp-success-icon">
                 <i className="fas fa-check"></i>
               </div>
@@ -1456,7 +1484,10 @@ const BookingPage = () => {
                 Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi.
               </p>
             </div>
-            <div className="bp-modal-footer" style={{ justifyContent: "center" }}>
+            <div
+              className="bp-modal-footer"
+              style={{ justifyContent: "center" }}
+            >
               <button
                 type="button"
                 className="btn-sm-round btn-fill"

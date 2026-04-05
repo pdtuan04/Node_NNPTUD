@@ -2,6 +2,19 @@ let serviceModel = require("../schemas/services");
 let bookingModel = require("../schemas/bookings");
 
 module.exports = {
+  GetAllActiveServices: async function () {
+    try {
+      return await serviceModel
+        .find({
+          isActive: true,
+          isDeleted: false,
+        })
+        .sort({ name: 1 });
+    } catch (error) {
+      throw new Error("Lỗi khi tải danh sách dịch vụ: " + error.message);
+    }
+  },
+
   GetServicesByPetType: async function (petTypeId) {
     try {
       return await serviceModel.find({
