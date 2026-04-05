@@ -25,8 +25,8 @@ router.put("/me", CheckLogin, async function (req, res) {
   }
 });
 
-router.get("/", CheckLogin, checkRole("ADMIN","MODERATOR"), async function (req, res, next) {//ADMIN
-  let users = await userController.GetAllUser()
+router.get("/", CheckLogin, checkRole("ADMIN"), async function (req, res, next) {//ADMIN
+  let users = await userController.GetAllUser();
   res.send(users);
 });
 router.get("/search", async function (req, res) {
@@ -34,7 +34,6 @@ router.get("/search", async function (req, res) {
         const keyword = req.query.email || req.query.q || "";
         let user = await userController.GetUserByEmail(keyword);
         if (!user) {
-            // thử tìm partial match theo username hoặc email
             const userModel = require("../schemas/users");
             const users = await userModel.find({
                 isDeleted: false,
@@ -107,5 +106,24 @@ router.delete("/:id", async function (req, res, next) {
     res.status(400).send({ message: err.message });
   }
 });
-
+router.put("/:id/role", CheckLogin, checkRole("ADMIN"), async function (req, res) {
+    try {
+        let userId = req.params.id;
+        let newRoleId = req.body.roleId;
+        if (!newRoleId) {
+            return res.status(400).send({ success: false, message: "Thiếu role mới" });
+        }
+        let updatedUser = await userController.ChangeRole(userId, newRoleId);
+        if (!updatedUser) {
+            return res.status(404).send({ success: false, message: "Lỗi cập nhật" });
+        }
+        res.send({ 
+            success: true,
+            message: "Cập nhật quyền thành công", 
+            data: updatedUser 
+        });
+    } catch (err) {
+        res.status(400).send({ success: false, message: err.message });
+    }
+});
 module.exports = router;

@@ -21,6 +21,7 @@ module.exports = {
     GetAllUser: async function () {
         return await userModel
             .find({ isDeleted: false })
+            .populate('role');
     },
     GetUserById: async function (id) {
         try {
@@ -105,6 +106,20 @@ module.exports = {
             await user.save();
             return true;
         } else {
+            return false;
+        }
+    },
+    ChangeRole: async function (userId, newRoleId) {
+        try {
+            let updatedUser = await userModel.findByIdAndUpdate(
+                userId,
+                { role: newRoleId },
+                { new: true }
+            ).populate('role');
+            
+            return updatedUser;
+        } catch (error) {
+            console.log("Lỗi đổi role:", error.message);
             return false;
         }
     }
