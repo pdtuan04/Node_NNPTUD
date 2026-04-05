@@ -23,7 +23,7 @@ function LoginPage() {
     if (response.ok) {
       try {
         const result = await response.json();
-        
+
         // Backend trả về { success: true, data: { token: "..." } }
         const token = result?.data?.token || result?.token;
 
@@ -42,9 +42,11 @@ function LoginPage() {
           });
 
           if (finalRole?.toUpperCase() === "ADMIN") {
-            navigate("/admin", { replace: true });
+            const redirectPath = from.startsWith("/admin") ? from : "/admin";
+            navigate(redirectPath, { replace: true });
           } else {
-            navigate(from || "/", { replace: true });
+            const redirectPath = from.startsWith("/admin") ? "/" : from || "/";
+            navigate(redirectPath, { replace: true });
           }
         } else {
           alert("Không nhận được Token từ Server");
@@ -57,7 +59,7 @@ function LoginPage() {
       try {
         const errText = await response.text();
         alert(`Đăng nhập thất bại: ${errText}`);
-      } catch(e) {
+      } catch (e) {
         alert("Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.");
       }
     }
@@ -67,7 +69,7 @@ function LoginPage() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/google", {
+      const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Cực kỳ quan trọng để lưu Cookie
@@ -84,11 +86,14 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Cực kỳ quan trọng để lưu Cookie
-        body: JSON.stringify({ username: form.username, password: form.password }),
+        body: JSON.stringify({
+          username: form.username,
+          password: form.password,
+        }),
       });
       await handleLoginSuccess(res);
     } catch (error) {
@@ -132,7 +137,10 @@ function LoginPage() {
             />
           </div>
 
-          <button className="btn btn-primary w-100 mb-3 py-2 fw-bold" disabled={loading}>
+          <button
+            className="btn btn-primary w-100 mb-3 py-2 fw-bold"
+            disabled={loading}
+          >
             {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2"></span>
