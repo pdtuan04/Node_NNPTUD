@@ -207,7 +207,7 @@ function RegisterPage() {
                     </button>
                 </form>
 
-                {/* Phần Google & Chuyển trang */}
+                {/* Phần Google & Chuyển trang
                 <div className="position-relative my-4">
                     <hr />
                     <span className="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small">
@@ -223,7 +223,7 @@ function RegisterPage() {
                         theme="outline"
                         width="300"
                     />
-                </div>
+                </div> */}
 
                 <div className="text-center">
                     <span className="text-muted">Đã có tài khoản? </span>

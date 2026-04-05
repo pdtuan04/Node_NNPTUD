@@ -441,7 +441,7 @@ const PetCareHistoryManagement = () => {
                               <i className="fas fa-eye"></i>
                             </button>
 
-                            {canEdit(r.bookingStatus) && (
+                            {/* {canEdit(r.bookingStatus) && (
                               <button
                                 className="btn btn-warning btn-sm me-1 mb-1"
                                 onClick={() => openEditModal(r)}
@@ -499,7 +499,7 @@ const PetCareHistoryManagement = () => {
                               >
                                 <i className="fas fa-ban"></i>
                               </button>
-                            )}
+                            )} */}
                           </td>
                         </tr>
                       );
