@@ -27,6 +27,7 @@ module.exports = {
             items: items,
             pageNumber: PageNumber,
             pageSize: PageSize,
+            totalCount: totalElements,
             totalElements: totalElements,
             totalPages: Math.ceil(totalElements / PageSize)
         };

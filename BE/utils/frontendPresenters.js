@@ -28,6 +28,8 @@ function presentPet(pet) {
   const petTypeSource = pet.petType && typeof pet.petType === "object" ? pet.petType : null;
   const petTypeId = petTypeSource ? petTypeSource._id || petTypeSource.id : pet.petType;
 
+  const userSource = pet.user && typeof pet.user === "object" ? pet.user : null;
+
   return {
     id: toLegacyNumericId(pet._id || pet.id),
     mongoId: toRawId(pet._id || pet.id),
@@ -37,6 +39,9 @@ function presentPet(pet) {
     petTypeId: toLegacyNumericId(petTypeId),
     petTypeMongoId: toRawId(petTypeId),
     petTypeName: petTypeSource ? petTypeSource.name : "",
+    ownerName: userSource ? userSource.username || userSource.fullName || userSource.email || "" : "",
+    ownerEmail: userSource ? userSource.email || "" : "",
+    ownerMongoId: userSource ? toRawId(userSource._id || userSource.id) : toRawId(pet.user),
   };
 }
 
