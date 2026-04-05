@@ -80,7 +80,7 @@ const BookingPage = () => {
   const fetchServices = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:8080/api/v1/services");
+      const response = await fetch("/api/v1/services");
       if (!response.ok) throw new Error("Không thể tải danh sách dịch vụ");
       const result = await response.json();
       if (result.success) {

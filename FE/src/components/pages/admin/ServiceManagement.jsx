@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 
 const ServiceManagement = () => {
-  const BACKEND_URL = "http://localhost:8080";
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -36,7 +35,7 @@ const ServiceManagement = () => {
   const resolveImageUrl = (url) => {
     if (!url) return "";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
-    return `${BACKEND_URL}${url.startsWith("/") ? url : `/${url}`}`;
+    return `http://localhost:8080${url.startsWith("/") ? url : `/${url}`}`;
   };
 
   // Show toast notification
@@ -85,12 +84,9 @@ const ServiceManagement = () => {
         params.append("search", search);
       }
 
-      const response = await fetch(
-        `${BACKEND_URL}/api/v1/services/paginated?${params}`,
-        {
-          credentials: "include",
-        },
-      );
+      const response = await fetch(`/api/v1/services/paginated?${params}`, {
+        credentials: "include",
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -146,7 +142,7 @@ const ServiceManagement = () => {
 
   const handleView = async (id) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/v1/services/${id}`, {
+      const response = await fetch(`/api/v1/services/${id}`, {
         credentials: "include",
       });
 
@@ -214,7 +210,7 @@ const ServiceManagement = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const response = await fetch(`${BACKEND_URL}/api/v1/upload`, {
+      const response = await fetch(`/api/v1/upload`, {
         method: "POST",
         credentials: "include",
         body: formDataUpload,
@@ -276,7 +272,7 @@ const ServiceManagement = () => {
       };
 
       if (editingService) {
-        response = await fetch(`${BACKEND_URL}/api/v1/services`, {
+        response = await fetch(`/api/v1/services`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -285,7 +281,7 @@ const ServiceManagement = () => {
           body: JSON.stringify(submitData),
         });
       } else {
-        response = await fetch(`${BACKEND_URL}/api/v1/services`, {
+        response = await fetch(`/api/v1/services`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -317,7 +313,7 @@ const ServiceManagement = () => {
     showConfirm(message, async () => {
       try {
         const response = await fetch(
-          `${BACKEND_URL}/api/v1/services/toggle-active?id=${service.id}`,
+          `/api/v1/services/toggle-active?id=${service.id}`,
           {
             method: "PATCH",
             credentials: "include",
