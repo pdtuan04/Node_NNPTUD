@@ -24,7 +24,7 @@ function ProfilePage() {
       }
 
       try {
-        const res = await fetch("http://localhost:8080/api/user/me", {
+        const res = await fetch("http://localhost:8080/api/v1/users/me", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -64,7 +64,7 @@ function ProfilePage() {
 
     setSaving(true);
     try {
-      const res = await fetch("http://localhost:8080/api/user/me", {
+      const res = await fetch("http://localhost:8080/api/v1/users/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

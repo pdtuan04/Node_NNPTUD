@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
   };
 
   const isAdmin = () => {
-    return userRole === "Admin" || userRole === "ADMIN";
+    return ["Admin", "ADMIN", "admin"].includes(userRole);
   };
 
   const updateUser = (partialUserData) => {

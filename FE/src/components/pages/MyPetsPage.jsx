@@ -9,10 +9,21 @@ const emptyForm = {
   age: "",
   petTypeId: "",
   imageUrl: "",
+  ownerId: "",
+  ownerUsername: "",
 };
 
+async function uploadImage(file) {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("http://localhost:8080/api/v1/upload/one_image", { method: "POST", body: fd });
+  const json = await res.json();
+  if (!res.ok || !json.filename) throw new Error(json.message || "Lỗi upload ảnh");
+  return "http://localhost:8080/api/v1/upload/" + json.filename;
+}
+
 const MyPetsPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin: checkIsAdmin } = useAuth();
   const navigate = useNavigate();
   const currentUserId = useMemo(() => user?.userId ?? user?.id ?? null, [user]);
   const authToken = useMemo(
@@ -36,6 +47,9 @@ const MyPetsPage = () => {
   const [createForm, setCreateForm] = useState(emptyForm);
   const [editForm, setEditForm] = useState(emptyForm);
   const [editingPetId, setEditingPetId] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [userSuggestions, setUserSuggestions] = useState([]);
 
   // Pagination / Search / Sort
   const [pageNumber, setPageNumber] = useState(1);
@@ -50,6 +64,8 @@ const MyPetsPage = () => {
     setSuccess("");
   };
 
+  const isAdmin = checkIsAdmin();
+
   const fetchPets = async () => {
     if (!currentUserId || !authToken) {
       setError("Vui lòng đăng nhập để xem thú cưng.");
@@ -61,12 +77,10 @@ const MyPetsPage = () => {
       setLoadingPets(true);
       clearNotice();
 
-      const response = await fetch(`${API_BASE}/pet/user/${currentUserId}`, {
+      const url = isAdmin ? `${API_BASE}/pet/all` : `${API_BASE}/pet/user/${currentUserId}`;
+      const response = await fetch(url, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
       });
 
       const result = await response.json().catch(() => null);
@@ -110,21 +124,56 @@ const MyPetsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserId]);
 
+  const fetchUserSuggestions = async (keyword, form, setForm) => {
+    if (!keyword.trim()) { setUserSuggestions([]); return; }
+    try {
+      setSearchingUser(true);
+      const res = await fetch(`http://localhost:8080/api/v1/users/search?email=${encodeURIComponent(keyword)}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const result = await res.json().catch(() => null);
+      if (res.ok && result?.success && result?.data) {
+        const list = Array.isArray(result.data) ? result.data : [result.data];
+        setUserSuggestions(list);
+      } else {
+        setUserSuggestions([]);
+      }
+    } catch {
+      setUserSuggestions([]);
+    } finally {
+      setSearchingUser(false);
+    }
+  };
+
+  const selectUser = (u, form, setForm) => {
+    setForm((prev) => ({ ...prev, ownerId: u.id, ownerUsername: u.email || u.username }));
+    setUserSuggestions([]);
+  };
+
+  const searchUser = async (username, form, setForm) => {
+    await fetchUserSuggestions(username, form, setForm);
+  };
+
   const openCreateModal = () => {
     clearNotice();
     setCreateForm(emptyForm);
+    setImageFile(null);
     setShowCreateModal(true);
   };
 
   const openEditModal = (pet) => {
     clearNotice();
-    setEditingPetId(pet.id);
+    setEditingPetId(pet.mongoId || pet.id);
     setEditForm({
       name: pet.name ?? "",
       age: String(pet.age ?? ""),
       petTypeId: String(pet.petTypeId ?? ""),
       imageUrl: pet.imageUrl ?? "",
+      ownerId: pet.ownerMongoId ?? "",
+      ownerUsername: pet.ownerEmail || pet.ownerName || "",
     });
+    setImageFile(null);
+    setUserSuggestions([]);
     setShowEditModal(true);
   };
 
@@ -151,32 +200,25 @@ const MyPetsPage = () => {
     clearNotice();
 
     const msg = validateForm(createForm);
-    if (msg) {
-      setError(msg);
-      return;
-    }
+    if (msg) { setError(msg); return; }
+
+    const targetUserId = createForm.ownerId || currentUserId;
+    if (isAdmin && !createForm.ownerId) { setError("Vui lòng chọn và xác nhận chủ sở hữu."); return; }
+    if (!targetUserId) { setError("Vui lòng chọn chủ sở hữu."); return; }
 
     try {
       setSubmitting(true);
+      let imageUrl = createForm.imageUrl?.trim() || null;
+      if (imageFile) imageUrl = await uploadImage(imageFile);
 
-      const response = await fetch(`${API_BASE}/pet/user/${currentUserId}`, {
+      const response = await fetch(`${API_BASE}/pet/user/${targetUserId}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          name: createForm.name.trim(),
-          age: Number(createForm.age),
-          petTypeId: Number(createForm.petTypeId),
-          imageUrl: createForm.imageUrl?.trim() || null,
-        }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ name: createForm.name.trim(), age: Number(createForm.age), petTypeId: Number(createForm.petTypeId), imageUrl }),
       });
 
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.success) {
-        throw new Error(result?.message || "Thêm thú cưng thất bại.");
-      }
+      if (!response.ok || !result?.success) throw new Error(result?.message || "Thêm thú cưng thất bại.");
 
       setSuccess("Thêm thú cưng thành công.");
       closeCreateModal();
@@ -193,38 +235,24 @@ const MyPetsPage = () => {
     clearNotice();
 
     const msg = validateForm(editForm);
-    if (msg) {
-      setError(msg);
-      return;
-    }
-
-    if (!editingPetId) {
-      setError("Không tìm thấy thú cưng cần sửa.");
-      return;
-    }
+    if (msg) { setError(msg); return; }
+    if (!editingPetId) { setError("Không tìm thấy thú cưng cần sửa."); return; }
 
     try {
       setSubmitting(true);
+      let imageUrl = editForm.imageUrl?.trim() || null;
+      if (imageFile) imageUrl = await uploadImage(imageFile);
 
-      const response = await fetch(
-        `${API_BASE}/pet/user/${currentUserId}/${editingPetId}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: editForm.name.trim(),
-            age: Number(editForm.age),
-            petTypeId: Number(editForm.petTypeId),
-            imageUrl: editForm.imageUrl?.trim() || null,
-          }),
-        },
-      );
+      const ownerUserId = isAdmin ? (editForm.ownerId || currentUserId) : currentUserId;
+      const response = await fetch(`${API_BASE}/pet/user/${ownerUserId}/${editingPetId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editForm.name.trim(), age: Number(editForm.age), petTypeId: Number(editForm.petTypeId), imageUrl, ownerId: editForm.ownerId || undefined }),
+      });
 
       const result = await response.json().catch(() => null);
-      if (!response.ok || !result?.success) {
-        throw new Error(result?.message || "Cập nhật thú cưng thất bại.");
-      }
+      if (!response.ok || !result?.success) throw new Error(result?.message || "Cập nhật thú cưng thất bại.");
 
       setSuccess("Cập nhật thú cưng thành công.");
       closeEditModal();
@@ -236,20 +264,24 @@ const MyPetsPage = () => {
     }
   };
 
-  const handleDeletePet = async (petId) => {
+  const handleDeletePet = async (pet) => {
     clearNotice();
 
     const ok = window.confirm("Bạn có chắc muốn xóa thú cưng này?");
     if (!ok) return;
 
+    const userId = isAdmin ? (pet.ownerMongoId || currentUserId) : currentUserId;
+    const petMongoId = pet.mongoId || pet.id;
+
     try {
       setSubmitting(true);
 
       const response = await fetch(
-        `${API_BASE}/pet/user/${currentUserId}/${petId}`,
+        `${API_BASE}/pet/user/${userId}/${petMongoId}`,
         {
           method: "DELETE",
           credentials: "include",
+          headers: { Authorization: `Bearer ${authToken}` },
         },
       );
 
@@ -316,14 +348,21 @@ const MyPetsPage = () => {
       </div>
 
       <div className="mb-3">
-        <label className="form-label fw-bold">Ảnh (URL)</label>
+        <label className="form-label fw-bold">Ảnh</label>
         <input
-          type="text"
+          type="file"
           className="form-control"
-          value={form.imageUrl}
-          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-          placeholder="https://..."
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files[0] || null)}
         />
+        {(imageFile ? URL.createObjectURL(imageFile) : form.imageUrl) && (
+          <img
+            src={imageFile ? URL.createObjectURL(imageFile) : form.imageUrl}
+            alt="preview"
+            className="mt-2 rounded"
+            style={{ width: 80, height: 80, objectFit: "cover" }}
+          />
+        )}
       </div>
     </>
   );
@@ -553,6 +592,8 @@ const MyPetsPage = () => {
                       )}
                     </th>
 
+                    {isAdmin && <th>Chủ sở hữu</th>}
+
                     <th style={{ width: "240px" }}>Thao tác</th>
                   </tr>
                 </thead>
@@ -560,7 +601,7 @@ const MyPetsPage = () => {
                 <tbody>
                   {pagedPets.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center py-4">
+                      <td colSpan={isAdmin ? "6" : "5"} className="text-center py-4">
                         {search ? "Không tìm thấy kết quả" : "Chưa có dữ liệu"}
                       </td>
                     </tr>
@@ -597,12 +638,13 @@ const MyPetsPage = () => {
 
                           <td>{pet.name}</td>
                           <td>{pet.age}</td>
-                          <td>{type?.name || `#${pet.petTypeId ?? "-"}`}</td>
+                          <td>{pet.petTypeName || petTypes.find((t) => String(t.id) === String(pet.petTypeId))?.name || `#${pet.petTypeId ?? "-"}`}</td>
+                          {isAdmin && <td>{pet.ownerName || pet.ownerEmail || "-"}</td>}
 
                           <td>
                             <button
                               className="btn btn-info btn-sm me-1"
-                              onClick={() => navigate(`/bookings?petId=${pet.id}`)}
+                              onClick={() => navigate(`/admin/pet-care-history?petId=${pet.mongoId || pet.id}`)}
                               disabled={submitting}
                               title="Lịch sử chăm sóc"
                             >
@@ -620,7 +662,7 @@ const MyPetsPage = () => {
 
                             <button
                               className="btn btn-danger btn-sm"
-                              onClick={() => handleDeletePet(pet.id)}
+                              onClick={() => handleDeletePet(pet)}
                               disabled={submitting}
                               title="Xóa"
                             >
@@ -728,7 +770,44 @@ const MyPetsPage = () => {
                       <div className="spinner-border spinner-border-sm text-primary" />
                     </div>
                   ) : (
-                    renderFormFields(createForm, setCreateForm)
+                    <>
+                      {isAdmin && (
+                        <div className="mb-3">
+                          <label className="form-label fw-bold">Chủ sở hữu <span className="text-danger">*</span></label>
+                          <div className="input-group position-relative">
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="Nhập email để tìm..."
+                              value={createForm.ownerUsername}
+                              onChange={(e) => {
+                                setCreateForm((p) => ({ ...p, ownerUsername: e.target.value, ownerId: "" }));
+                                fetchUserSuggestions(e.target.value, createForm, setCreateForm);
+                              }}
+                              autoComplete="off"
+                            />
+                            <button type="button" className="btn btn-outline-secondary" disabled={searchingUser}>
+                              {searchingUser ? <span className="spinner-border spinner-border-sm" /> : <i className="fas fa-search" />}
+                            </button>
+                            {userSuggestions.length > 0 && (
+                              <ul className="list-group position-absolute w-100 shadow" style={{ top: "100%", zIndex: 1000 }}>
+                                {userSuggestions.map((u) => (
+                                  <li key={u.id} className="list-group-item list-group-item-action" style={{ cursor: "pointer" }}
+                                    onMouseDown={() => { 
+                                      setCreateForm((p) => ({ ...p, ownerId: String(u.id), ownerUsername: u.email || u.username })); 
+                                      setUserSuggestions([]); 
+                                    }}>
+                                    <strong>{u.username}</strong>{u.email && <span className="text-muted ms-2">{u.email}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          {createForm.ownerId && <small className="text-success"><i className="fas fa-check-circle me-1" />Đã chọn người dùng</small>}
+                        </div>
+                      )}
+                      {renderFormFields(createForm, setCreateForm)}
+                    </>
                   )}
                 </div>
                 <div className="modal-footer">
@@ -769,7 +848,41 @@ const MyPetsPage = () => {
                       <div className="spinner-border spinner-border-sm text-primary" />
                     </div>
                   ) : (
-                    renderFormFields(editForm, setEditForm)
+                    <>
+                      {isAdmin && (
+                        <div className="mb-3">
+                          <label className="form-label fw-bold">Chủ sở hữu <span className="text-danger">*</span></label>
+                          <div className="input-group position-relative">
+                            <input
+                              type="text"
+                              className="form-control"
+                              placeholder="Nhập email để tìm..."
+                              value={editForm.ownerUsername}
+                              onChange={(e) => {
+                                setEditForm((p) => ({ ...p, ownerUsername: e.target.value, ownerId: "" }));
+                                fetchUserSuggestions(e.target.value, editForm, setEditForm);
+                              }}
+                              autoComplete="off"
+                            />
+                            <button type="button" className="btn btn-outline-secondary" disabled={searchingUser}>
+                              {searchingUser ? <span className="spinner-border spinner-border-sm" /> : <i className="fas fa-search" />}
+                            </button>
+                            {userSuggestions.length > 0 && (
+                              <ul className="list-group position-absolute w-100 shadow" style={{ top: "100%", zIndex: 1000 }}>
+                                {userSuggestions.map((u) => (
+                                  <li key={u.id} className="list-group-item list-group-item-action" style={{ cursor: "pointer" }}
+                                    onMouseDown={() => { setEditForm((p) => ({ ...p, ownerId: String(u.id), ownerUsername: u.email || u.username })); setUserSuggestions([]); }}>
+                                    <strong>{u.username}</strong>{u.email && <span className="text-muted ms-2">{u.email}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          {editForm.ownerId && <small className="text-success"><i className="fas fa-check-circle me-1" />Đã chọn người dùng</small>}
+                        </div>
+                      )}
+                      {renderFormFields(editForm, setEditForm)}
+                    </>
                   )}
                 </div>
                 <div className="modal-footer">
