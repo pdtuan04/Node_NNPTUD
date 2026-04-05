@@ -23,7 +23,7 @@ function LoginPage() {
     if (response.ok) {
       try {
         const result = await response.json();
-        
+
         // Backend trả về { success: true, data: { token: "..." } }
         const token = result?.data?.token || result?.token;
 
@@ -42,9 +42,11 @@ function LoginPage() {
           });
 
           if (finalRole?.toUpperCase() === "ADMIN") {
-            navigate("/admin", { replace: true });
+            const redirectPath = from.startsWith("/admin") ? from : "/admin";
+            navigate(redirectPath, { replace: true });
           } else {
-            navigate(from || "/", { replace: true });
+            const redirectPath = from.startsWith("/admin") ? "/" : (from || "/");
+            navigate(redirectPath, { replace: true });
           }
         } else {
           alert("Không nhận được Token từ Server");
@@ -57,7 +59,7 @@ function LoginPage() {
       try {
         const errText = await response.text();
         alert(`Đăng nhập thất bại: ${errText}`);
-      } catch(e) {
+      } catch (e) {
         alert("Đăng nhập thất bại. Vui lòng kiểm tra lại tài khoản/mật khẩu.");
       }
     }
