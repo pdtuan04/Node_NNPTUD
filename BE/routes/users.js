@@ -7,15 +7,46 @@ let userController = require('../controllers/users')
 let { CheckLogin, checkRole } = require('../utils/authHandler')
 
 
+router.get("/me", CheckLogin, async function (req, res) {
+  res.send({ data: req.user });
+});
+
+router.put("/me", CheckLogin, async function (req, res) {
+  try {
+    const { email, phone } = req.body;
+    const updated = await require("../schemas/users").findByIdAndUpdate(
+      req.user._id,
+      { email, phone },
+      { new: true }
+    );
+    res.send({ data: updated, message: "Cập nhật thành công" });
+  } catch (err) {
+    res.status(400).send({ message: err.message });
+  }
+});
+
 router.get("/", CheckLogin, checkRole("ADMIN","MODERATOR"), async function (req, res, next) {//ADMIN
   let users = await userController.GetAllUser()
   res.send(users);
 });
 router.get("/search", async function (req, res) {
     try {
-        let user = await userController.GetUserByEmail(req.query.email);
-        if (!user) return res.status(404).send({ success: false, message: "Không tìm thấy khách hàng" });
-        res.send({ success: true, data: { id: user._id, username: user.username, email: user.email } });
+        const keyword = req.query.email || req.query.q || "";
+        let user = await userController.GetUserByEmail(keyword);
+        if (!user) {
+            // thử tìm partial match theo username hoặc email
+            const userModel = require("../schemas/users");
+            const users = await userModel.find({
+                isDeleted: false,
+                $or: [
+                    { email: { $regex: keyword, $options: "i" } },
+                    { username: { $regex: keyword, $options: "i" } }
+                ]
+            }).limit(5);
+            if (users.length === 0) return res.status(404).send({ success: false, message: "Không tìm thấy khách hàng" });
+            return res.send({ success: true, data: users.map(u => ({ id: u._id.toString(), username: u.username, email: u.email })) });
+        }
+        res.send({ success: true, data: { id: user._id.toString(), username: user.username, email: user.email } });
     } catch (err) {
         res.status(400).send({ success: false, message: err.message });
     }
