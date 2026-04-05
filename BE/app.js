@@ -54,6 +54,10 @@ app.use("/api/payments", require("./routes/payments"));
 app.use("/api/pet", require("./routes/petsCompat"));
 app.use("/api/pet-type", require("./routes/petTypesCompat"));
 app.use("/api/admin/revenue", require("./routes/revenue"));
+<<<<<<< Updated upstream
+=======
+app.use('/api/statistics', require('./routes/statistic'));
+>>>>>>> Stashed changes
 mongoose.connect("mongodb://localhost:27017/NNPTUD-C3?replicaSet=rs0");
 mongoose.connection.on("connected", () => {
   console.log("connected");
