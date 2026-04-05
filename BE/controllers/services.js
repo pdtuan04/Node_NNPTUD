@@ -4,12 +4,18 @@ let bookingModel = require("../schemas/bookings");
 module.exports = {
   GetAllActiveServices: async function () {
     try {
-      return await serviceModel
+      const services = await serviceModel
         .find({
           isActive: true,
           isDeleted: false,
         })
-        .sort({ name: 1 });
+        .sort({ name: 1 })
+        .lean();
+
+      return services.map((s) => {
+        const { _id, ...rest } = s;
+        return { ...rest, id: _id.toString() };
+      });
     } catch (error) {
       throw new Error("Lỗi khi tải danh sách dịch vụ: " + error.message);
     }
@@ -17,10 +23,17 @@ module.exports = {
 
   GetServicesByPetType: async function (petTypeId) {
     try {
-      return await serviceModel.find({
-        petTypes: petTypeId,
-        isActive: true,
-        isDeleted: false,
+      const services = await serviceModel
+        .find({
+          petTypes: petTypeId,
+          isActive: true,
+          isDeleted: false,
+        })
+        .lean();
+
+      return services.map((s) => {
+        const { _id, ...rest } = s;
+        return { ...rest, id: _id.toString() };
       });
     } catch (error) {
       return [];
@@ -52,12 +65,18 @@ module.exports = {
         .find(searchQuery)
         .sort(sortObject)
         .skip(skip)
-        .limit(pageSize);
+        .limit(pageSize)
+        .lean();
 
       const totalCount = await serviceModel.countDocuments(searchQuery);
 
+      const mappedServices = services.map((s) => {
+        const { _id, ...rest } = s;
+        return { ...rest, id: _id.toString() };
+      });
+
       return {
-        services: services,
+        services: mappedServices,
         totalCount: totalCount,
       };
     } catch (error) {
@@ -67,16 +86,19 @@ module.exports = {
 
   GetServiceById: async function (id) {
     try {
-      const service = await serviceModel.findOne({
-        _id: id,
-        isDeleted: false,
-      });
+      const service = await serviceModel
+        .findOne({
+          _id: id,
+          isDeleted: false,
+        })
+        .lean();
 
       if (!service) {
         throw new Error("Không tìm thấy dịch vụ");
       }
 
-      return service;
+      const { _id, ...rest } = service;
+      return { ...rest, id: _id.toString() };
     } catch (error) {
       throw error;
     }
@@ -111,7 +133,17 @@ module.exports = {
         isDeleted: false,
       });
 
-      return await newService.save();
+      const saved = await newService.save();
+
+      return {
+        id: saved._id.toString(),
+        name: saved.name,
+        description: saved.description,
+        price: saved.price,
+        durationInMinutes: saved.durationInMinutes,
+        imageUrl: saved.imageUrl,
+        isActive: saved.isActive,
+      };
     } catch (error) {
       throw error;
     }
@@ -154,7 +186,17 @@ module.exports = {
       existingService.isActive =
         data.isActive !== undefined ? data.isActive : existingService.isActive;
 
-      return await existingService.save();
+      const updated = await existingService.save();
+
+      return {
+        id: updated._id.toString(),
+        name: updated.name,
+        description: updated.description,
+        price: updated.price,
+        durationInMinutes: updated.durationInMinutes,
+        imageUrl: updated.imageUrl,
+        isActive: updated.isActive,
+      };
     } catch (error) {
       throw error;
     }
@@ -223,12 +265,18 @@ module.exports = {
         .find(searchQuery)
         .sort({ updatedAt: -1 })
         .skip(skip)
-        .limit(pageSize);
+        .limit(pageSize)
+        .lean();
 
       const totalCount = await serviceModel.countDocuments(searchQuery);
 
+      const mappedServices = services.map((s) => {
+        const { _id, ...rest } = s;
+        return { ...rest, id: _id.toString() };
+      });
+
       return {
-        services: services,
+        services: mappedServices,
         totalCount: totalCount,
       };
     } catch (error) {

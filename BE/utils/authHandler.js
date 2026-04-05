@@ -22,15 +22,13 @@ module.exports = {
         res.status(403).send({ message: "ban chua dang nhap" });
         return;
       }
-
       let getUser = await userController.GetUserById(result.id);
-
       if (!getUser) {
         res.status(403).send({ message: "ban chua dang nhap" });
-      } else {
-        req.user = getUser;
-        next();
+        return;
       }
+      req.user = getUser;
+      next();
     } catch (error) {
       res.status(403).send({ message: "ban chua dang nhap" });
     }

@@ -1,7 +1,9 @@
 let express = require("express");
 let router = express.Router();
 let serviceController = require("../controllers/services");
+let { CheckLogin, checkRole } = require("../utils/authHandler");
 
+// Public API - Get all active services (for users)
 router.get("/", async function (req, res) {
   try {
     const services = await serviceController.GetAllActiveServices();
@@ -18,6 +20,7 @@ router.get("/", async function (req, res) {
   }
 });
 
+// Public API - Get services by pet type (for users)
 router.get("/pet-type/:petTypeId", async function (req, res) {
   try {
     let services = await serviceController.GetServicesByPetType(
@@ -32,67 +35,164 @@ router.get("/pet-type/:petTypeId", async function (req, res) {
   }
 });
 
-router.get("/paginated", async function (req, res) {
-  try {
-    const search = req.query.search || "";
-    const pageNumber = parseInt(req.query.pageNumber) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 10;
-    const sortBy = req.query.sortBy || "name";
-    const sortDir = req.query.sortDir || "Ascending";
+// ADMIN only - Get paginated services for management
+router.get(
+  "/paginated",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      const search = req.query.search || "";
+      const pageNumber = parseInt(req.query.pageNumber) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 10;
+      const sortBy = req.query.sortBy || "name";
+      const sortDir = req.query.sortDir || "Ascending";
 
-    const result = await serviceController.GetAllServicesPaginated(
-      search,
-      pageNumber,
-      pageSize,
-      sortBy,
-      sortDir,
-    );
+      const result = await serviceController.GetAllServicesPaginated(
+        search,
+        pageNumber,
+        pageSize,
+        sortBy,
+        sortDir,
+      );
 
-    res.send({
-      success: true,
-      data: {
-        items: result.services,
-        totalCount: result.totalCount,
-        pageNumber: pageNumber,
-        pageSize: pageSize,
-      },
-    });
-  } catch (error) {
-    res.status(400).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.send({
+        success: true,
+        data: {
+          items: result.services,
+          totalCount: result.totalCount,
+          pageNumber: pageNumber,
+          pageSize: pageSize,
+        },
+      });
+    } catch (error) {
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
-router.get("/deleted", async function (req, res) {
-  try {
-    const pageNumber = parseInt(req.query.pageNumber) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 10;
+// ADMIN only - Get deleted services
+router.get(
+  "/deleted",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      const pageNumber = parseInt(req.query.pageNumber) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 10;
 
-    const result = await serviceController.GetDeletedServices(
-      pageNumber,
-      pageSize,
-    );
+      const result = await serviceController.GetDeletedServices(
+        pageNumber,
+        pageSize,
+      );
 
-    res.send({
-      success: true,
-      data: {
-        items: result.services,
-        totalCount: result.totalCount,
-        pageNumber: pageNumber,
-        pageSize: pageSize,
-      },
-    });
-  } catch (error) {
-    res.status(400).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
+      res.send({
+        success: true,
+        data: {
+          items: result.services,
+          totalCount: result.totalCount,
+          pageNumber: pageNumber,
+          pageSize: pageSize,
+        },
+      });
+    } catch (error) {
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
 
-router.get("/:id", async function (req, res) {
+// ADMIN only - Toggle active status
+router.patch(
+  "/toggle-active",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      if (!req.query.id) {
+        return res.status(400).send({
+          success: false,
+          message: "ID dịch vụ là bắt buộc",
+        });
+      }
+
+      await serviceController.ToggleActiveService(req.query.id);
+      res.send({
+        success: true,
+        message: "Cập nhật trạng thái thành công",
+      });
+    } catch (error) {
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+// ADMIN only - Soft delete service
+router.patch(
+  "/soft-delete",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      if (!req.query.id) {
+        return res.status(400).send({
+          success: false,
+          message: "ID dịch vụ là bắt buộc",
+        });
+      }
+
+      await serviceController.SoftDeleteService(req.query.id);
+      res.send({
+        success: true,
+        message: "Vô hiệu hóa dịch vụ thành công",
+      });
+    } catch (error) {
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+// ADMIN only - Restore deleted service
+router.patch(
+  "/restore",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      if (!req.query.id) {
+        return res.status(400).send({
+          success: false,
+          message: "ID dịch vụ là bắt buộc",
+        });
+      }
+
+      await serviceController.RestoreService(req.query.id);
+      res.send({
+        success: true,
+        message: "Khôi phục dịch vụ thành công",
+      });
+    } catch (error) {
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+// ADMIN only - Get service by ID (for management) - MUST be after specific routes
+router.get("/:id", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     const service = await serviceController.GetServiceById(req.params.id);
     res.send({
@@ -107,7 +207,8 @@ router.get("/:id", async function (req, res) {
   }
 });
 
-router.post("/", async function (req, res) {
+// ADMIN only - Create new service
+router.post("/", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     const service = await serviceController.CreateService(req.body);
     res.send({
@@ -123,7 +224,8 @@ router.post("/", async function (req, res) {
   }
 });
 
-router.put("/", async function (req, res) {
+// ADMIN only - Update service
+router.put("/", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     if (!req.body.id) {
       return res.status(400).send({
@@ -140,72 +242,6 @@ router.put("/", async function (req, res) {
       success: true,
       message: "Cập nhật dịch vụ thành công",
       data: service,
-    });
-  } catch (error) {
-    res.status(400).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-router.patch("/toggle-active", async function (req, res) {
-  try {
-    if (!req.query.id) {
-      return res.status(400).send({
-        success: false,
-        message: "ID dịch vụ là bắt buộc",
-      });
-    }
-
-    await serviceController.ToggleActiveService(req.query.id);
-    res.send({
-      success: true,
-      message: "Cập nhật trạng thái thành công",
-    });
-  } catch (error) {
-    res.status(400).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-router.patch("/soft-delete", async function (req, res) {
-  try {
-    if (!req.query.id) {
-      return res.status(400).send({
-        success: false,
-        message: "ID dịch vụ là bắt buộc",
-      });
-    }
-
-    await serviceController.SoftDeleteService(req.query.id);
-    res.send({
-      success: true,
-      message: "Vô hiệu hóa dịch vụ thành công",
-    });
-  } catch (error) {
-    res.status(400).send({
-      success: false,
-      message: error.message,
-    });
-  }
-});
-
-router.patch("/restore", async function (req, res) {
-  try {
-    if (!req.query.id) {
-      return res.status(400).send({
-        success: false,
-        message: "ID dịch vụ là bắt buộc",
-      });
-    }
-
-    await serviceController.RestoreService(req.query.id);
-    res.send({
-      success: true,
-      message: "Khôi phục dịch vụ thành công",
     });
   } catch (error) {
     res.status(400).send({
