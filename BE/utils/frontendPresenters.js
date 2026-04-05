@@ -15,7 +15,6 @@ function presentPetType(petType) {
 
   return {
     id: toLegacyNumericId(petType._id || petType.id),
-    mongoId: toRawId(petType._id || petType.id),
     name: petType.name,
     image: petType.image || "",
     isActive: petType.isActive,
@@ -32,16 +31,14 @@ function presentPet(pet) {
 
   return {
     id: toLegacyNumericId(pet._id || pet.id),
-    mongoId: toRawId(pet._id || pet.id),
     name: pet.name,
     age: pet.age || 0,
     imageUrl: pet.imageUrl || "",
     petTypeId: toLegacyNumericId(petTypeId),
-    petTypeMongoId: toRawId(petTypeId),
     petTypeName: petTypeSource ? petTypeSource.name : "",
     ownerName: userSource ? userSource.username || userSource.fullName || userSource.email || "" : "",
     ownerEmail: userSource ? userSource.email || "" : "",
-    ownerMongoId: userSource ? toRawId(userSource._id || userSource.id) : toRawId(pet.user),
+    ownerId: userSource ? toRawId(userSource._id || userSource.id) : toRawId(pet.user),
   };
 }
 
@@ -57,7 +54,6 @@ function presentBooking(booking) {
     userId: user ? toRawId(user._id || user.id) : toRawId(booking.user),
     userName: user ? user.fullName || user.username || user.email || "" : "",
     petId: pet ? toLegacyNumericId(pet._id || pet.id) : null,
-    petMongoId: pet ? toRawId(pet._id || pet.id) : toRawId(booking.pet),
     petName: pet ? pet.name : "",
     scheduledAt: booking.scheduledAt,
     expectedEndTime: booking.expectedEndTime,

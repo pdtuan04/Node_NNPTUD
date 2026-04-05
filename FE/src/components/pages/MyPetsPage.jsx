@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
-const API_BASE = "http://localhost:8080/api";
+const API_HOST = "http://localhost:8080";
+const API_BASE = `${API_HOST}/api`;
+
+function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return "";
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+  return imageUrl.startsWith("/") ? `${API_HOST}${imageUrl}` : `${API_HOST}/${imageUrl}`;
+}
 
 const emptyForm = {
   name: "",
@@ -16,10 +23,10 @@ const emptyForm = {
 async function uploadImage(file) {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch("http://localhost:8080/api/v1/upload/one_image", { method: "POST", body: fd });
-  const json = await res.json();
+  const res = await fetch(`${API_HOST}/api/v1/upload/one_image`, { method: "POST", body: fd });
+  const json = await res.json().catch(() => null);
   if (!res.ok || !json.filename) throw new Error(json.message || "Lỗi upload ảnh");
-  return "http://localhost:8080/api/v1/upload/" + json.filename;
+  return `${API_HOST}/uploads/${json.filename}`;
 }
 
 const MyPetsPage = () => {
@@ -163,13 +170,13 @@ const MyPetsPage = () => {
 
   const openEditModal = (pet) => {
     clearNotice();
-    setEditingPetId(pet.mongoId || pet.id);
+    setEditingPetId(pet.id);
     setEditForm({
       name: pet.name ?? "",
       age: String(pet.age ?? ""),
       petTypeId: String(pet.petTypeId ?? ""),
       imageUrl: pet.imageUrl ?? "",
-      ownerId: pet.ownerMongoId ?? "",
+      ownerId: pet.ownerId ?? "",
       ownerUsername: pet.ownerEmail || pet.ownerName || "",
     });
     setImageFile(null);
@@ -180,12 +187,16 @@ const MyPetsPage = () => {
   const closeCreateModal = () => {
     setShowCreateModal(false);
     setCreateForm(emptyForm);
+    setImageFile(null);
+    setUserSuggestions([]);
   };
 
   const closeEditModal = () => {
     setShowEditModal(false);
     setEditingPetId(null);
     setEditForm(emptyForm);
+    setImageFile(null);
+    setUserSuggestions([]);
   };
 
   const validateForm = (form) => {
@@ -214,7 +225,7 @@ const MyPetsPage = () => {
       const response = await fetch(`${API_BASE}/pet/user/${targetUserId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ name: createForm.name.trim(), age: Number(createForm.age), petTypeId: Number(createForm.petTypeId), imageUrl }),
+        body: JSON.stringify({ name: createForm.name.trim(), age: Number(createForm.age), petTypeId: createForm.petTypeId, imageUrl }),
       });
 
       const result = await response.json().catch(() => null);
@@ -247,8 +258,11 @@ const MyPetsPage = () => {
       const response = await fetch(`${API_BASE}/pet/user/${ownerUserId}/${editingPetId}`, {
         method: "PUT",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editForm.name.trim(), age: Number(editForm.age), petTypeId: Number(editForm.petTypeId), imageUrl, ownerId: editForm.ownerId || undefined }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ name: editForm.name.trim(), age: Number(editForm.age), petTypeId: editForm.petTypeId, imageUrl, ownerId: editForm.ownerId || undefined }),
       });
 
       const result = await response.json().catch(() => null);
@@ -270,14 +284,14 @@ const MyPetsPage = () => {
     const ok = window.confirm("Bạn có chắc muốn xóa thú cưng này?");
     if (!ok) return;
 
-    const userId = isAdmin ? (pet.ownerMongoId || currentUserId) : currentUserId;
-    const petMongoId = pet.mongoId || pet.id;
+    const userId = isAdmin ? (pet.ownerId || currentUserId) : currentUserId;
+    const petId = pet.id;
 
     try {
       setSubmitting(true);
 
       const response = await fetch(
-        `${API_BASE}/pet/user/${userId}/${petMongoId}`,
+        `${API_BASE}/pet/user/${userId}/${petId}`,
         {
           method: "DELETE",
           credentials: "include",
@@ -355,9 +369,9 @@ const MyPetsPage = () => {
           accept="image/*"
           onChange={(e) => setImageFile(e.target.files[0] || null)}
         />
-        {(imageFile ? URL.createObjectURL(imageFile) : form.imageUrl) && (
+        {(imageFile ? URL.createObjectURL(imageFile) : resolveImageUrl(form.imageUrl)) && (
           <img
-            src={imageFile ? URL.createObjectURL(imageFile) : form.imageUrl}
+            src={imageFile ? URL.createObjectURL(imageFile) : resolveImageUrl(form.imageUrl)}
             alt="preview"
             className="mt-2 rounded"
             style={{ width: 80, height: 80, objectFit: "cover" }}
@@ -393,7 +407,7 @@ const MyPetsPage = () => {
     const keyword = search.toLowerCase();
 
     const filtered = pets.filter((pet) => {
-      const type = petTypes.find((t) => t.id === pet.petTypeId);
+      const type = petTypes.find((t) => String(t.id) === String(pet.petTypeId));
       const typeName = type?.name || "";
       return (
         (pet.name || "").toLowerCase().includes(keyword) ||
@@ -416,8 +430,8 @@ const MyPetsPage = () => {
       }
 
       if (sortBy === "petType") {
-        const aType = petTypes.find((t) => t.id === a.petTypeId)?.name || "";
-        const bType = petTypes.find((t) => t.id === b.petTypeId)?.name || "";
+        const aType = petTypes.find((t) => String(t.id) === String(a.petTypeId))?.name || "";
+        const bType = petTypes.find((t) => String(t.id) === String(b.petTypeId))?.name || "";
         return sortDir === "asc"
           ? aType.localeCompare(bType, "vi")
           : bType.localeCompare(aType, "vi");
@@ -607,13 +621,13 @@ const MyPetsPage = () => {
                     </tr>
                   ) : (
                     pagedPets.map((pet) => {
-                      const type = petTypes.find((t) => t.id === pet.petTypeId);
+                      const type = petTypes.find((t) => String(t.id) === String(pet.petTypeId));
                       return (
                         <tr key={pet.id}>
                           <td className="text-center">
                             {pet.imageUrl ? (
                               <img
-                                src={pet.imageUrl}
+                                src={resolveImageUrl(pet.imageUrl)}
                                 alt={pet.name || "pet"}
                                 style={{
                                   width: "50px",
@@ -644,7 +658,7 @@ const MyPetsPage = () => {
                           <td>
                             <button
                               className="btn btn-info btn-sm me-1"
-                              onClick={() => navigate(`/admin/pet-care-history?petId=${pet.mongoId || pet.id}`)}
+                              onClick={() => navigate(`/admin/pet-care-history?petId=${pet.id}`)}
                               disabled={submitting}
                               title="Lịch sử chăm sóc"
                             >

@@ -3,6 +3,32 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import "./BookingPage.css";
 
+const API_HOST = "http://localhost:8080";
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+
+function resolveImageUrl(imageUrl) {
+  if (!imageUrl) return "";
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+  return imageUrl.startsWith("/") ? `${API_HOST}${imageUrl}` : `${API_HOST}/${imageUrl}`;
+}
+
+async function uploadPetImage(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(`${API_HOST}/api/v1/upload/one_image`, {
+    method: "POST",
+    body: formData,
+  });
+  const result = await response.json().catch(() => null);
+
+  if (!response.ok || !result?.filename) {
+    throw new Error(result?.message || "Không thể tải ảnh thú cưng.");
+  }
+
+  return `${API_HOST}/uploads/${result.filename}`;
+}
+
 const BookingPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -53,6 +79,8 @@ const BookingPage = () => {
   });
   const [addingPet, setAddingPet] = useState(false);
   const [addPetError, setAddPetError] = useState(null);
+  const [newPetImageFile, setNewPetImageFile] = useState(null);
+  const [newPetImagePreview, setNewPetImagePreview] = useState("");
 
   // Personal info
   const [phone, setPhone] = useState(user?.phone || "");
@@ -79,6 +107,14 @@ const BookingPage = () => {
   useEffect(() => {
     setPhone(user?.phone || "");
   }, [user]);
+
+  useEffect(() => {
+    return () => {
+      if (newPetImagePreview.startsWith("blob:")) {
+        URL.revokeObjectURL(newPetImagePreview);
+      }
+    };
+  }, [newPetImagePreview]);
 
   /* ================= API FUNCTIONS ================ */
   const fetchServices = async () => {
@@ -206,8 +242,50 @@ const BookingPage = () => {
   };
 
   /* ================== HANDLERS =================== */
-  const handleOpenAddPetModal = () => {
+  const resetAddPetForm = () => {
+    setNewPet({ name: "", petTypeId: "", age: "", breed: "", weight: "" });
+    setNewPetImageFile(null);
+    setNewPetImagePreview("");
     setAddPetError(null);
+  };
+
+  const handleCloseAddPetModal = () => {
+    setShowAddPetModal(false);
+    resetAddPetForm();
+  };
+
+  const handlePetImageChange = (event) => {
+    const file = event.target.files?.[0] || null;
+
+    if (!file) {
+      setNewPetImageFile(null);
+      setNewPetImagePreview("");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      setAddPetError("Vui lòng chọn file ảnh hợp lệ.");
+      setNewPetImageFile(null);
+      setNewPetImagePreview("");
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      event.target.value = "";
+      setAddPetError("Ảnh thú cưng phải nhỏ hơn 2MB.");
+      setNewPetImageFile(null);
+      setNewPetImagePreview("");
+      return;
+    }
+
+    setAddPetError(null);
+    setNewPetImageFile(file);
+    setNewPetImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleOpenAddPetModal = () => {
+    resetAddPetForm();
     setShowAddPetModal(true);
     if (petTypes.length === 0) fetchPetTypes();
   };
@@ -219,6 +297,12 @@ const BookingPage = () => {
       setAddPetError(null);
       if (!currentUserId || !authToken)
         throw new Error("Không xác định được người dùng hiện tại");
+
+      let imageUrl = "";
+      if (newPetImageFile) {
+        imageUrl = await uploadPetImage(newPetImageFile);
+      }
+
       const response = await fetch(
         `http://localhost:8080/api/pet/user/${currentUserId}`,
         {
@@ -231,13 +315,20 @@ const BookingPage = () => {
             name: newPet.name,
             petTypeId: newPet.petTypeId,
             age: parseInt(newPet.age),
+            imageUrl,
           }),
         },
       );
-      if (!response.ok) throw new Error("Không thể thêm thú cưng");
-      setNewPet({ name: "", petTypeId: "", age: "", breed: "", weight: "" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || "Không thể thêm thú cưng");
+      }
+
       await fetchUserPets();
-      setShowAddPetModal(false);
+      if (result?.data?.id) {
+        setSelectedPet(String(result.data.id));
+      }
+      handleCloseAddPetModal();
     } catch (err) {
       setAddPetError(err.message);
     } finally {
@@ -425,7 +516,67 @@ const BookingPage = () => {
   };
 
   /* ============== COMPUTED VALUES ================= */
-  const selectedPetInfo = pets.find((p) => p.id === Number(selectedPet));
+  const selectedPetInfo = pets.find((p) => String(p.id) === String(selectedPet));
+
+  const renderPetAvatar = (pet) => {
+    const imageUrl = resolveImageUrl(pet?.imageUrl);
+
+    if (!imageUrl) {
+      return (
+        <div className="pet-avatar-circle">
+          <i className="fas fa-paw"></i>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pet-avatar-circle pet-avatar-has-image">
+        <img
+          src={imageUrl}
+          alt={pet?.name || "pet"}
+          className="pet-avatar-image"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            const fallback = event.currentTarget.nextElementSibling;
+            if (fallback) fallback.style.display = "flex";
+          }}
+        />
+        <span className="pet-avatar-fallback" style={{ display: "none" }}>
+          <i className="fas fa-paw"></i>
+        </span>
+      </div>
+    );
+  };
+
+  const renderServiceVisual = (service) => {
+    const imageUrl = resolveImageUrl(service?.imageUrl);
+
+    if (!imageUrl) {
+      return (
+        <div className="service-icon-box">
+          <i className={`fas ${getServiceIcon(service?.name)}`}></i>
+        </div>
+      );
+    }
+
+    return (
+      <div className="service-icon-box service-image-box">
+        <img
+          src={imageUrl}
+          alt={service?.name || "service"}
+          className="service-card-image"
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+            const fallback = event.currentTarget.nextElementSibling;
+            if (fallback) fallback.style.display = "flex";
+          }}
+        />
+        <span className="service-image-fallback" style={{ display: "none" }}>
+          <i className={`fas ${getServiceIcon(service?.name)}`}></i>
+        </span>
+      </div>
+    );
+  };
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce(
     (sum, s) => sum + s.durationInMinutes,
@@ -579,9 +730,7 @@ const BookingPage = () => {
                   {/* Selected pet info card */}
                   {selectedPetInfo && (
                     <div className="pet-info-card">
-                      <div className="pet-avatar-circle">
-                        <i className="fas fa-paw"></i>
-                      </div>
+                      {renderPetAvatar(selectedPetInfo)}
                       <div className="pet-details">
                         <strong>{selectedPetInfo.name}</strong>
                         <span>
@@ -638,11 +787,7 @@ const BookingPage = () => {
                       <span className="service-check">
                         <i className="fas fa-check-circle"></i>
                       </span>
-                      <div className="service-icon-box">
-                        <i
-                          className={`fas ${getServiceIcon(service.name)}`}
-                        ></i>
-                      </div>
+                      {renderServiceVisual(service)}
                       <div className="service-name">{service.name}</div>
                       <div className="service-price">
                         {service.price.toLocaleString("vi-VN")}đ
@@ -997,7 +1142,23 @@ const BookingPage = () => {
                       <ul className="summary-service-list">
                         {selectedServices.map((s) => (
                           <li key={s.id}>
-                            <span>{s.name}</span>
+                            <span className="summary-service-main">
+                              {s.imageUrl ? (
+                                <img
+                                  src={resolveImageUrl(s.imageUrl)}
+                                  alt={s.name}
+                                  className="summary-service-image"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <span className="summary-service-fallback">
+                                  <i className={`fas ${getServiceIcon(s.name)}`}></i>
+                                </span>
+                              )}
+                              <span>{s.name}</span>
+                            </span>
                             <span>{s.price.toLocaleString("vi-VN")}đ</span>
                           </li>
                         ))}
@@ -1102,7 +1263,7 @@ const BookingPage = () => {
       {showAddPetModal && (
         <div
           className="bp-modal-overlay"
-          onClick={() => setShowAddPetModal(false)}
+          onClick={handleCloseAddPetModal}
         >
           <div className="bp-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bp-modal-header">
@@ -1111,7 +1272,7 @@ const BookingPage = () => {
               </h5>
               <button
                 className="bp-modal-close"
-                onClick={() => setShowAddPetModal(false)}
+                onClick={handleCloseAddPetModal}
               >
                 <i className="fas fa-times"></i>
               </button>
@@ -1215,13 +1376,35 @@ const BookingPage = () => {
                     />
                   </div>
                 </div>
+
+                <div className="mb-3">
+                  <label className="bp-label">Ảnh thú cưng</label>
+                  <input
+                    type="file"
+                    className="bp-input"
+                    accept="image/*"
+                    onChange={handlePetImageChange}
+                  />
+                  <div className="bp-field-hint">
+                    Chấp nhận ảnh JPG, PNG, WEBP dưới 2MB.
+                  </div>
+                  {newPetImagePreview && (
+                    <div className="pet-upload-preview mt-3">
+                      <img
+                        src={newPetImagePreview}
+                        alt="Xem trước ảnh thú cưng"
+                        className="pet-upload-preview-image"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="bp-modal-footer">
                 <button
                   type="button"
                   className="btn-booking-secondary"
-                  onClick={() => setShowAddPetModal(false)}
+                  onClick={handleCloseAddPetModal}
                   disabled={addingPet}
                 >
                   Hủy

@@ -161,6 +161,48 @@
   flex-shrink: 0;
 }
 
+.pet-avatar-has-image {
+  background: #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.pet-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pet-avatar-fallback {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.pet-upload-preview {
+  width: 96px;
+  height: 96px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+.pet-upload-preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bp-field-hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.45rem;
+}
+
 .pet-details span {
   display: block;
   font-size: 0.82rem;
@@ -232,6 +274,26 @@
   color: #2563eb;
   font-size: 1.2rem;
   transition: background 0.25s;
+}
+
+.service-image-box {
+  overflow: hidden;
+  position: relative;
+  background: #dbeafe;
+}
+
+.service-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.service-image-fallback {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
 }
 
 .service-card:hover .service-icon-box,
@@ -416,6 +478,35 @@
   margin: 0;
 }
 
+
+.summary-service-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.summary-service-image,
+.summary-service-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.summary-service-image {
+  object-fit: cover;
+  display: block;
+  border: 1px solid #dbeafe;
+}
+
+.summary-service-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dbeafe;
+  color: #2563eb;
+}
 .summary-service-list li {
   display: flex;
   justify-content: space-between;

@@ -27,7 +27,6 @@ const normalizeUser = (rawUser) => {
     ...rawUser,
     userId: normalizedUserId,
     id: normalizedUserId,
-    mongoId: normalizedUserId,
     email: normalizedEmail,
     phone: normalizedPhone,
   };

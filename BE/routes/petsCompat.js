@@ -24,6 +24,17 @@ async function resolvePetId(userId, rawPetId) {
   return matched ? matched._id : null;
 }
 
+async function resolvePetIdAnyOwner(rawPetId) {
+  if (!rawPetId) return null;
+
+  const direct = await petModel.findOne({ _id: rawPetId, isDeleted: false }).catch(() => null);
+  if (direct) return direct._id;
+
+  const pets = await petModel.find({ isDeleted: false });
+  const matched = pets.find((item) => legacyIdMatches(item._id, rawPetId));
+  return matched ? matched._id : null;
+}
+
 async function resolvePetTypeId(rawPetTypeId) {
   if (!rawPetTypeId) return null;
 
@@ -110,11 +121,9 @@ router.put("/user/:userId/:petId", CheckLogin, async function (req, res) {
       return res.status(400).send({ success: false, message: "Loại thú cưng không hợp lệ." });
     }
 
-    // Admin tìm pet theo petId trực tiếp, không cần check owner
     let mongoId;
     if (isAdmin) {
-      const direct = await petModel.findOne({ _id: req.params.petId, isDeleted: false }).catch(() => null);
-      mongoId = direct ? direct._id : null;
+      mongoId = await resolvePetIdAnyOwner(req.params.petId);
     } else {
       const userId = getRequestUserId(req);
       mongoId = await resolvePetId(userId, req.params.petId);
