@@ -45,7 +45,7 @@ function LoginPage() {
             const redirectPath = from.startsWith("/admin") ? from : "/admin";
             navigate(redirectPath, { replace: true });
           } else {
-            const redirectPath = from.startsWith("/admin") ? "/" : (from || "/");
+            const redirectPath = from.startsWith("/admin") ? "/" : from || "/";
             navigate(redirectPath, { replace: true });
           }
         } else {
@@ -69,7 +69,7 @@ function LoginPage() {
   const handleGoogleSuccess = async (credentialResponse) => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/google", {
+      const res = await fetch("/api/auth/google", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Cực kỳ quan trọng để lưu Cookie
@@ -86,11 +86,14 @@ function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include", // Cực kỳ quan trọng để lưu Cookie
-        body: JSON.stringify({ username: form.username, password: form.password }),
+        body: JSON.stringify({
+          username: form.username,
+          password: form.password,
+        }),
       });
       await handleLoginSuccess(res);
     } catch (error) {
@@ -134,7 +137,10 @@ function LoginPage() {
             />
           </div>
 
-          <button className="btn btn-primary w-100 mb-3 py-2 fw-bold" disabled={loading}>
+          <button
+            className="btn btn-primary w-100 mb-3 py-2 fw-bold"
+            disabled={loading}
+          >
             {loading ? (
               <>
                 <span className="spinner-border spinner-border-sm me-2"></span>

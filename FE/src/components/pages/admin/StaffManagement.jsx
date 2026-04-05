@@ -73,10 +73,9 @@ const StaffManagement = () => {
       });
       if (search) params.append("search", search);
 
-      const response = await fetch(
-        `http://localhost:8080/api/staff/paginated?${params}`,
-        { credentials: "include" },
-      );
+      const response = await fetch(`/api/staff/paginated?${params}`, {
+        credentials: "include",
+      });
 
       if (response.ok) {
         const result = await response.json();
@@ -135,7 +134,7 @@ const StaffManagement = () => {
 
   const handleView = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/staff/${id}`, {
+      const response = await fetch(`/api/staff/${id}`, {
         credentials: "include",
       });
       if (response.ok) {
@@ -199,7 +198,7 @@ const StaffManagement = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const response = await fetch("http://localhost:8080/api/upload", {
+      const response = await fetch("/api/v1/upload", {
         method: "POST",
         credentials: "include",
         body: formDataUpload,
@@ -229,7 +228,6 @@ const StaffManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Show loading state
     const submitButton = e.target.querySelector('button[type="submit"]');
     const originalText = submitButton.textContent;
     submitButton.disabled = true;
@@ -239,17 +237,14 @@ const StaffManagement = () => {
     try {
       let response;
       if (editingStaff) {
-        response = await fetch(
-          `http://localhost:8080/api/staff/${editingStaff.id}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(formData),
-          },
-        );
+        response = await fetch(`/api/staff/${editingStaff.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(formData),
+        });
       } else {
-        response = await fetch(`http://localhost:8080/api/staff`, {
+        response = await fetch(`/api/staff`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -257,11 +252,7 @@ const StaffManagement = () => {
         });
       }
 
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-
       const result = await response.json();
-      console.log("Response data:", result);
 
       if (response.ok && result.success) {
         showToast(result.message, "success");
@@ -274,7 +265,6 @@ const StaffManagement = () => {
       console.error("Error details:", error);
       showToast("Không thể kết nối tới server! " + error.message, "error");
     } finally {
-      // Restore button state
       if (submitButton) {
         submitButton.disabled = false;
         submitButton.textContent = originalText;
@@ -287,7 +277,7 @@ const StaffManagement = () => {
     showConfirm(`Bạn có chắc muốn ${action} nhân viên này?`, async () => {
       try {
         const response = await fetch(
-          `http://localhost:8080/api/staff/toggle-active?id=${staffMember.id}`,
+          `/api/staff/toggle-active?id=${staffMember.id}`,
           { method: "PATCH", credentials: "include" },
         );
         const result = await response.json();
@@ -307,10 +297,10 @@ const StaffManagement = () => {
   const handleDelete = (staffMember) => {
     showConfirm("Bạn có chắc muốn xóa nhân viên này?", async () => {
       try {
-        const response = await fetch(
-          `http://localhost:8080/api/staff/${staffMember.id}`,
-          { method: "DELETE", credentials: "include" },
-        );
+        const response = await fetch(`/api/staff/${staffMember.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
         const result = await response.json();
         if (response.ok && result.success) {
           showToast(result.message, "success");

@@ -9,11 +9,18 @@ var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
 let { agenda, startBackgroundJobs } = require("./utils/backgroundHandler");
 var app = express();
-app.use(cors({
-  origin: 'https://localhost:5173',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  credentials: true
-}));
+
+// CORS must be before other middleware
+app.use(
+  cors({
+    origin: ["https://localhost:5173", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "Cookie"],
+    exposedHeaders: ["Set-Cookie"],
+  }),
+);
+
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "ejs");
@@ -25,28 +32,29 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.use('/', indexRouter);
-app.use('/api/v1/users', require('./routes/users'));
-app.use('/api/v1/products', require('./routes/products'));
-app.use('/api/v1/categories', require('./routes/categories'));
-app.use('/api/v1/roles', require('./routes/roles'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/v1/carts', require('./routes/carts'));
-app.use('/api/v1/upload', require('./routes/upload'));
-app.use('/api/v1/messages', require('./routes/messages'));
-app.use('/api/v1/articles', require('./routes/articles'));
-app.use('/api/v1/comments', require('./routes/comments'));
-app.use('/api/v1/bookings', require('./routes/bookings'));
-app.use('/api/v1/pets', require('./routes/pets'));
-app.use('/api/v1/services', require('./routes/services'));
-app.use('/api/v1/pet-types', require('./routes/petTypes'));
-mongoose.connect('mongodb://localhost:27017/NNPTUD-C3?replicaSet=rs0');
-mongoose.connection.on('connected', () => {
+app.use("/", indexRouter);
+app.use("/api/v1/users", require("./routes/users"));
+app.use("/api/v1/products", require("./routes/products"));
+app.use("/api/v1/categories", require("./routes/categories"));
+app.use("/api/v1/roles", require("./routes/roles"));
+app.use("/api/auth", require("./routes/auth"));
+app.use("/api/v1/carts", require("./routes/carts"));
+app.use("/api/v1/upload", require("./routes/upload"));
+app.use("/api/v1/messages", require("./routes/messages"));
+app.use("/api/v1/articles", require("./routes/articles"));
+app.use("/api/v1/comments", require("./routes/comments"));
+app.use("/api/v1/bookings", require("./routes/bookings"));
+app.use("/api/v1/pets", require("./routes/pets"));
+app.use("/api/v1/services", require("./routes/services"));
+app.use("/api/v1/pet-types", require("./routes/petTypes"));
+app.use("/api/staff", require("./routes/staff"));
+mongoose.connect("mongodb://localhost:27017/NNPTUD-C3?replicaSet=rs0");
+mongoose.connection.on("connected", () => {
   console.log("connected");
   startBackgroundJobs();
 });
 
-mongoose.connection.on('disconnected', () => {
+mongoose.connection.on("disconnected", () => {
   console.log("disconnected");
 });
 
