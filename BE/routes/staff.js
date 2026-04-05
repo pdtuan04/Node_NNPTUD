@@ -62,7 +62,37 @@ router.get(
   },
 );
 
-// Get staff by ID - MUST be after specific routes like /count-active
+// Get deleted staff - MUST be before /:id
+router.get(
+  "/deleted",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      const pageNumber = parseInt(req.query.pageNumber) || 1;
+      const pageSize = parseInt(req.query.pageSize) || 10;
+
+      const result = await staffController.GetDeletedStaff(
+        pageNumber,
+        pageSize,
+      );
+
+      res.send({
+        success: true,
+        message: "Lấy danh sách nhân viên đã xóa thành công",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error in GET /deleted:", error);
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+// Get staff by ID - MUST be after specific routes like /count-active, /deleted
 router.get("/:id", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     const staff = await staffController.GetStaffById(req.params.id);
@@ -139,6 +169,36 @@ router.patch(
       });
     } catch (error) {
       console.error("Error in PATCH /toggle-active:", error);
+      res.status(400).send({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+// Restore deleted staff
+router.patch(
+  "/restore",
+  CheckLogin,
+  checkRole("ADMIN"),
+  async function (req, res) {
+    try {
+      const id = req.query.id;
+      if (!id) {
+        return res.status(400).send({
+          success: false,
+          message: "ID nhân viên là bắt buộc",
+        });
+      }
+
+      await staffController.RestoreStaff(id);
+      res.send({
+        success: true,
+        message: "Khôi phục nhân viên thành công",
+      });
+    } catch (error) {
+      console.error("Error in PATCH /restore:", error);
       res.status(400).send({
         success: false,
         message: error.message,
