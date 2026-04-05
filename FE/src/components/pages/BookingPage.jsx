@@ -6,6 +6,10 @@ import "./BookingPage.css";
 const BookingPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const authToken =
+    user?.token || JSON.parse(localStorage.getItem("user") || "null")?.token;
+
+  const currentUserId = user?.userId ?? user?.id ?? null;
 
   /* ===================== STATE ===================== */
   const [services, setServices] = useState([]);
@@ -99,8 +103,7 @@ const BookingPage = () => {
   const fetchUserPets = async () => {
     try {
       setLoadingPets(true);
-      const currentUserId = Number(user?.userId ?? user?.id);
-      if (!Number.isFinite(currentUserId)) {
+      if (!currentUserId || !authToken) {
         setPets([]);
         setPetError("Vui lòng đăng nhập để tải danh sách thú cưng");
         return;
@@ -109,8 +112,10 @@ const BookingPage = () => {
         `http://localhost:8080/api/pet/user/${currentUserId}`,
         {
           method: "GET",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
         },
       );
       if (!response.ok) throw new Error("Không thể tải danh sách thú cưng");
@@ -212,15 +217,16 @@ const BookingPage = () => {
     try {
       setAddingPet(true);
       setAddPetError(null);
-      const currentUserId = Number(user?.userId ?? user?.id);
-      if (!Number.isFinite(currentUserId))
+      if (!currentUserId || !authToken)
         throw new Error("Không xác định được người dùng hiện tại");
       const response = await fetch(
         `http://localhost:8080/api/pet/user/${currentUserId}`,
         {
           method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
           body: JSON.stringify({
             name: newPet.name,
             petTypeId: newPet.petTypeId,
@@ -250,16 +256,17 @@ const BookingPage = () => {
 
     try {
       setSubmitting(true);
-      const currentUserId = Number(user?.userId ?? user?.id);
-      if (!Number.isFinite(currentUserId))
+      if (!currentUserId || !authToken)
         throw new Error("Vui lòng đăng nhập trước khi đặt lịch");
 
       const response = await fetch(
         `http://localhost:8080/api/bookings/user/${currentUserId}`,
         {
           method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`,
+          },
           body: JSON.stringify({
             scheduledAt: selectedSlot.startAt,
             notes,
@@ -271,8 +278,7 @@ const BookingPage = () => {
       if (!response.ok) throw new Error("Không thể tạo lịch hẹn");
       const result = await response.json();
       if (result.success) {
-        const token = user?.token;
-        if (token) await fetchMyVouchers(token);
+        if (authToken) await fetchMyVouchers(authToken);
         setSelectedVoucherCode("");
         setBookingResult(result.data);
         setShowConfirmModal(true);

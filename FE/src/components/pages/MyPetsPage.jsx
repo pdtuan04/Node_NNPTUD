@@ -14,7 +14,11 @@ const emptyForm = {
 const MyPetsPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const currentUserId = useMemo(() => Number(user?.userId ?? user?.id), [user]);
+  const currentUserId = useMemo(() => user?.userId ?? user?.id ?? null, [user]);
+  const authToken = useMemo(
+    () => user?.token || JSON.parse(localStorage.getItem("user") || "null")?.token,
+    [user],
+  );
 
   const [pets, setPets] = useState([]);
   const [petTypes, setPetTypes] = useState([]);
@@ -47,7 +51,7 @@ const MyPetsPage = () => {
   };
 
   const fetchPets = async () => {
-    if (!Number.isFinite(currentUserId)) {
+    if (!currentUserId || !authToken) {
       setError("Vui lòng đăng nhập để xem thú cưng.");
       setPets([]);
       return;
@@ -59,8 +63,10 @@ const MyPetsPage = () => {
 
       const response = await fetch(`${API_BASE}/pet/user/${currentUserId}`, {
         method: "GET",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
       });
 
       const result = await response.json().catch(() => null);
@@ -155,8 +161,10 @@ const MyPetsPage = () => {
 
       const response = await fetch(`${API_BASE}/pet/user/${currentUserId}`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
         body: JSON.stringify({
           name: createForm.name.trim(),
           age: Number(createForm.age),

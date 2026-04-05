@@ -8,13 +8,14 @@ module.exports = {
             return [];
         }
     },
-    CreatePet: async function (userId, name, petTypeId, age) {
+    CreatePet: async function (userId, name, petTypeId, age, imageUrl) {
         try {
             let newPet = new petModel({
                 user: userId,
                 name: name,
                 petType: petTypeId,
-                age: age
+                age: age,
+                imageUrl: imageUrl || ""
             });
             await newPet.save();
             return await newPet.populate('petType');
