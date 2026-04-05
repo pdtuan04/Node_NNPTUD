@@ -2,9 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 
 const ArticleManagement = () => {
-    // ==========================================
-    // 1. CÁC STATE (TRẠNG THÁI) CỦA GIAO DIỆN
-    // ==========================================
     const [articles, setArticles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -12,8 +9,6 @@ const ArticleManagement = () => {
     const [submitting, setSubmitting] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false); 
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
-
-    // State cho Form thêm/sửa bài viết
     const [currentId, setCurrentId] = useState(null);
     const [title, setTitle] = useState('');
     const [summary, setSummary] = useState('');
@@ -21,31 +16,19 @@ const ArticleManagement = () => {
     const [imageUrl, setImageUrl] = useState('');
     const [isPublished, setIsPublished] = useState(true);
 
-    const BACKEND_URL = 'http://localhost:8080'; 
-
-    // Hàm xử lý link ảnh (nếu là link web thì giữ nguyên, nếu từ server thì nối thêm host)
+    const BACKEND_URL = 'http://localhost:8080';
     const resolveImageUrl = (url) => {
         if (!url) return '';
         if (url.startsWith('http://') || url.startsWith('https://')) return url;
         return `${BACKEND_URL}${url.startsWith('/') ? url : `/${url}`}`;
     };
-
-    // Hàm hiển thị thông báo
     const showToast = (message, type = 'success') => {
         setToast({ show: true, message, type });
         setTimeout(() => setToast({ show: false, message: '', type: '' }), 3000);
     };
-
-    // ==========================================
-    // 2. CÁC HÀM GỌI API (LẤY, THÊM, SỬA, XÓA)
-    // ==========================================
-    
-    // Chạy 1 lần khi mở trang để lấy danh sách bài viết
     useEffect(() => {
         fetchArticles();
     }, []);
-
-    // LẤY DANH SÁCH BÀI VIẾT
     const fetchArticles = async () => {
         try {
             setLoading(true);
@@ -55,7 +38,6 @@ const ArticleManagement = () => {
             });
             const result = await response.json();
             
-            // Backend trả về thẳng 1 mảng bài viết, nên gắn result luôn
             if (response.ok) {
                 setArticles(result || []);
             }
@@ -66,7 +48,6 @@ const ArticleManagement = () => {
         }
     };
 
-    // LƯU BÀI VIẾT (THÊM HOẶC CẬP NHẬT)
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!title || !content) {
@@ -96,12 +77,10 @@ const ArticleManagement = () => {
             });
 
             const result = await response.json();
-
-            // Backend trả về thẳng object bài viết vừa tạo/sửa
             if (response.ok) {
                 showToast(isEditMode ? 'Cập nhật thành công!' : 'Thêm bài mới thành công!', 'success');
                 setShowModal(false);
-                fetchArticles(); // Tải lại danh sách
+                fetchArticles();
             } else {
                 throw new Error(result.message || 'Có lỗi xảy ra');
             }
@@ -111,8 +90,6 @@ const ArticleManagement = () => {
             setSubmitting(false);
         }
     };
-
-    // XÓA BÀI VIẾT
     const handleDelete = async (id) => {
         if (!window.confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) return;
         try {
@@ -133,8 +110,6 @@ const ArticleManagement = () => {
             showToast(error.message, 'error');
         }
     };
-
-    // UPLOAD ẢNH BÌA
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -162,13 +137,9 @@ const ArticleManagement = () => {
             showToast(err.message, 'error');
         } finally {
             setUploadingImage(false);
-            e.target.value = null; // Reset ô chọn file
+            e.target.value = null;
         }
     };
-
-    // ==========================================
-    // 3. CÁC HÀM XỬ LÝ MỞ FORM (MODAL)
-    // ==========================================
     const handleOpenCreate = () => {
         setIsEditMode(false);
         setCurrentId(null);
@@ -190,10 +161,6 @@ const ArticleManagement = () => {
         setIsPublished(article.isPublished); 
         setShowModal(true);
     };
-
-    // ==========================================
-    // 4. GIAO DIỆN HTML (RENDER)
-    // ==========================================
     return (
         <div className="container-fluid px-4">
             {/* THÔNG BÁO TOAST */}

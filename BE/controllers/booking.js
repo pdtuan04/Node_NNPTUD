@@ -116,6 +116,15 @@ module.exports = {
 
             booking.bookingStatus = 'CONFIRMED';
             await booking.save();
+            if (agenda && booking.user && booking.user.email) {
+                let timeString = new Date(booking.scheduledAt).toLocaleString('vi-VN');
+                console.log("Lên lịch gửi email xác nhận cho:", booking.user.email);
+                await agenda.now('sendBookingEmailJob', {
+                    email: booking.user.email,
+                    bookingCode: booking.bookingCode,
+                    time: timeString
+                });
+            }
             return booking;
         } catch (error) {
             return false;
@@ -254,6 +263,54 @@ module.exports = {
             await newTx.save();
             return booking;
         } catch (error) {
+            return false;
+        }
+    },
+    UpdateBooking: async function (bookingId, userId, petId, serviceIds, scheduledAtString, notes) {
+        try {
+            let booking = await bookingModel.findById(bookingId);
+            if (!booking) return false;
+
+            let scheduledAt = new Date(scheduledAtString);
+            if (scheduledAt <= new Date()) return false;
+
+            let services = await serviceModel.find({ _id: { $in: serviceIds }, isActive: true });
+            if (services.length !== serviceIds.length) return false;
+
+            let totalMinutes = services.reduce((sum, s) => sum + s.durationInMinutes, 0);
+            let expectedEndTime = new Date(scheduledAt.getTime() + totalMinutes * 60000);
+            let startOfDay = new Date(scheduledAt);
+            startOfDay.setHours(0, 0, 0, 0);
+            let endOfDay = new Date(startOfDay);
+            endOfDay.setDate(endOfDay.getDate() + 1);
+
+            let bookingsInDay = await bookingModel.find({
+                scheduledAt: { $gte: startOfDay, $lt: endOfDay },
+                isDeleted: false
+            });
+            if (!this.IsSlotAvailable(scheduledAt, expectedEndTime, bookingsInDay, bookingId)) {
+                return false; 
+            }
+
+            let totalPrice = services.reduce((sum, s) => sum + s.price, 0);
+            let bookingDetails = services.map(s => ({
+                service: s._id,
+                priceAtTime: s.price
+            }));
+            booking.scheduledAt = scheduledAt;
+            booking.expectedEndTime = expectedEndTime;
+            booking.totalPrice = totalPrice;
+            booking.notes = notes;
+            booking.pet = petId;
+            booking.services = bookingDetails;
+            if(booking.bookingStatus === 'PENDING' || booking.bookingStatus === 'PENDING_PAYMENT') {
+                booking.holdExpiredAt = new Date(Date.now() + config.holdMinutes * 60000);
+            }
+
+            await booking.save();
+            return await booking.populate(['user', 'pet', 'services.service']);
+        } catch (error) {
+            console.log(error.message);
             return false;
         }
     }
