@@ -65,7 +65,6 @@ const getPaymentMeta = (isPaid) =>
 const isBookingPaid = (booking) => Boolean(booking?.isPaid ?? booking?.paid);
 
 const PetCareHistoryManagement = () => {
-  const [weekStart, setWeekStart] = useState(toDateInput(startOfWeekMonday()));
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -109,40 +108,34 @@ const PetCareHistoryManagement = () => {
       setLoading(true);
       clearNotice();
 
-      const summaryRes = await fetch(
-        `http://localhost:8080/api/bookings/bookings-in-week?startDate=${weekStart}`,
-        { credentials: "include" },
-      );
-      if (!summaryRes.ok) throw new Error("Không thể tải danh sách lịch hẹn tuần.");
-      const summaryList = await summaryRes.json();
+      const token = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user"))?.token : null;
+      const res = await fetch("http://localhost:8080/api/bookings/all", {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Không thể tải danh sách lịch hẹn.");
+      const json = await res.json();
+      const list = json?.data || json || [];
 
       const detailResults = await Promise.all(
-        (summaryList || []).map(async (item) => {
+        list.map(async (item) => {
           try {
             const detail = await fetchBookingDetail(item.id);
             return {
               ...item,
               petName: detail?.petName || "-",
               petId: detail?.petId ?? null,
-              totalPrice: detail?.totalPrice ?? 0,
+              totalPrice: detail?.totalPrice ?? item.totalPrice ?? 0,
               notes: detail?.notes || "",
-              services: detail?.services || [],
+              services: detail?.services || item.services || [],
             };
           } catch {
-            return {
-              ...item,
-              petName: "-",
-              petId: null,
-              totalPrice: 0,
-              notes: "",
-              services: [],
-            };
+            return { ...item, petName: "-", petId: null, totalPrice: item.totalPrice || 0, notes: "", services: item.services || [] };
           }
         }),
       );
 
-      const history = detailResults.filter((x) => [0, 1, 2, 3, 4, 5, 6].includes(x.bookingStatus));
-      setRows(history);
+      setRows(detailResults);
     } catch (e) {
       setError(e.message || "Có lỗi xảy ra.");
       setRows([]);
@@ -154,7 +147,7 @@ const PetCareHistoryManagement = () => {
   useEffect(() => {
     fetchHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekStart]);
+  }, []);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -353,17 +346,7 @@ const PetCareHistoryManagement = () => {
               </select>
             </div>
 
-            <div className="col-md-3">
-              <input
-                type="date"
-                className="form-control"
-                value={weekStart}
-                onChange={(e) => setWeekStart(e.target.value)}
-                title="Ngày bắt đầu tuần"
-              />
-            </div>
-
-            <div className="col-md-7">
+            <div className="col-md-5">
               <form onSubmit={handleSearch} className="d-flex">
                 <input
                   className="form-control me-2"
