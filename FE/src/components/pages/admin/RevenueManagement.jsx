@@ -41,7 +41,7 @@ function defaultDateRange() {
 }
 
 const RevenueManagement = () => {
-    const { token } = useAuth();
+    const { user } = useAuth();
     const [dateRange, setDateRange] = useState(defaultDateRange());
     const [groupBy, setGroupBy] = useState('day'); // 'day' | 'month'
 
@@ -51,12 +51,17 @@ const RevenueManagement = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const headers = { Authorization: `Bearer ${token}` };
+    const token = user?.token || JSON.parse(localStorage.getItem('user') || 'null')?.token;
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
+            if (!token) {
+                throw new Error('Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết.');
+            }
+
             const { from, to } = dateRange;
             const [summaryRes, chartRes, txRes] = await Promise.all([
                 fetch(`${API}/api/admin/revenue/summary?from=${from}&to=${to}`, { headers }),
@@ -65,14 +70,43 @@ const RevenueManagement = () => {
             ]);
 
             const [summaryJson, chartJson, txJson] = await Promise.all([
-                summaryRes.json(), chartRes.json(), txRes.json(),
+                summaryRes.json().catch(() => null),
+                chartRes.json().catch(() => null),
+                txRes.json().catch(() => null),
             ]);
 
-            if (summaryJson.success) setSummary(summaryJson.data);
-            if (chartJson.success) setChartData(chartJson.data);
-            if (txJson.success) setTransactions(txJson.data);
+            if (!summaryRes.ok) {
+                throw new Error(summaryJson?.message || 'Không thể tải dữ liệu tổng quan doanh thu.');
+            }
+
+            if (!chartRes.ok) {
+                throw new Error(chartJson?.message || 'Không thể tải biểu đồ doanh thu.');
+            }
+
+            if (!txRes.ok) {
+                throw new Error(txJson?.message || 'Không thể tải danh sách giao dịch.');
+            }
+
+            if (!summaryJson?.success) {
+                throw new Error(summaryJson?.message || 'API doanh thu tổng quan trả dữ liệu không hợp lệ.');
+            }
+
+            if (!chartJson?.success) {
+                throw new Error(chartJson?.message || 'API biểu đồ doanh thu trả dữ liệu không hợp lệ.');
+            }
+
+            if (!txJson?.success) {
+                throw new Error(txJson?.message || 'API giao dịch doanh thu trả dữ liệu không hợp lệ.');
+            }
+
+            setSummary(summaryJson.data || null);
+            setChartData(chartJson.data || []);
+            setTransactions(txJson.data || []);
         } catch (e) {
-            setError('Không thể tải dữ liệu. Kiểm tra kết nối server.');
+            setSummary(null);
+            setChartData([]);
+            setTransactions([]);
+            setError(e.message || 'Không thể tải dữ liệu. Kiểm tra kết nối server.');
         } finally {
             setLoading(false);
         }

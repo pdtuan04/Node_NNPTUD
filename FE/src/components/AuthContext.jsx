@@ -1,12 +1,23 @@
 import { createContext, useContext, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext();
 
 const normalizeUser = (rawUser) => {
   if (!rawUser) return null;
 
-  const parsedId = Number(rawUser.userId ?? rawUser.id);
-  const normalizedUserId = Number.isFinite(parsedId) ? parsedId : null;
+  let resolvedId = rawUser.userId ?? rawUser.id ?? rawUser.mongoId ?? null;
+  if (!resolvedId && rawUser.token) {
+    try {
+      const decoded = jwtDecode(rawUser.token);
+      resolvedId = decoded?.id ?? decoded?.userId ?? null;
+    } catch {
+      resolvedId = null;
+    }
+  }
+
+  const normalizedUserId =
+    resolvedId;
   const normalizedEmail =
     rawUser.email ?? rawUser.userEmail ?? rawUser.mail ?? "";
   const normalizedPhone =
@@ -16,6 +27,7 @@ const normalizeUser = (rawUser) => {
     ...rawUser,
     userId: normalizedUserId,
     id: normalizedUserId,
+    mongoId: normalizedUserId,
     email: normalizedEmail,
     phone: normalizedPhone,
   };
