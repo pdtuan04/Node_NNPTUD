@@ -86,7 +86,7 @@ const ServiceManagement = () => {
       }
 
       const response = await fetch(
-        `${BACKEND_URL}/api/services/paginated?${params}`,
+        `${BACKEND_URL}/api/v1/services/paginated?${params}`,
         {
           credentials: "include",
         },
@@ -146,7 +146,7 @@ const ServiceManagement = () => {
 
   const handleView = async (id) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/services/${id}`, {
+      const response = await fetch(`${BACKEND_URL}/api/v1/services/${id}`, {
         credentials: "include",
       });
 
@@ -178,7 +178,9 @@ const ServiceManagement = () => {
       isActive: service.isActive !== undefined ? service.isActive : true,
     });
 
-    setImagePreview(service.imageUrl ? resolveImageUrl(service.imageUrl) : null);
+    setImagePreview(
+      service.imageUrl ? resolveImageUrl(service.imageUrl) : null,
+    );
     setShowModal(true);
   };
 
@@ -201,8 +203,8 @@ const ServiceManagement = () => {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      showToast("Kích thước ảnh tối đa 5MB!", "error");
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("Kích thước ảnh tối đa 2MB!", "error");
       return;
     }
 
@@ -212,7 +214,7 @@ const ServiceManagement = () => {
       const formDataUpload = new FormData();
       formDataUpload.append("file", file);
 
-      const response = await fetch(`${BACKEND_URL}/api/upload`, {
+      const response = await fetch(`${BACKEND_URL}/api/v1/upload`, {
         method: "POST",
         credentials: "include",
         body: formDataUpload,
@@ -274,7 +276,7 @@ const ServiceManagement = () => {
       };
 
       if (editingService) {
-        response = await fetch(`${BACKEND_URL}/api/services`, {
+        response = await fetch(`${BACKEND_URL}/api/v1/services`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -283,7 +285,7 @@ const ServiceManagement = () => {
           body: JSON.stringify(submitData),
         });
       } else {
-        response = await fetch(`${BACKEND_URL}/api/services`, {
+        response = await fetch(`${BACKEND_URL}/api/v1/services`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -315,7 +317,7 @@ const ServiceManagement = () => {
     showConfirm(message, async () => {
       try {
         const response = await fetch(
-          `${BACKEND_URL}/api/services/toggle-active?id=${service.id}`,
+          `${BACKEND_URL}/api/v1/services/toggle-active?id=${service.id}`,
           {
             method: "PATCH",
             credentials: "include",
@@ -821,7 +823,7 @@ const ServiceManagement = () => {
                               )}
                             </label>
                             <div className="form-text">
-                              JPEG, PNG, WEBP. Tối đa 5MB.
+                              JPEG, PNG, WEBP. Tối đa 2MB.
                             </div>
                           </div>
                         </div>
