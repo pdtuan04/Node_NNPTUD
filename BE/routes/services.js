@@ -3,7 +3,7 @@ let router = express.Router();
 let serviceController = require("../controllers/services");
 let { CheckLogin, checkRole } = require("../utils/authHandler");
 
-// Public API - Get all active services (for users)
+
 router.get("/", async function (req, res) {
   try {
     const services = await serviceController.GetAllActiveServices();
@@ -20,7 +20,7 @@ router.get("/", async function (req, res) {
   }
 });
 
-// Public API - Get services by pet type (for users)
+
 router.get("/pet-type/:petTypeId", async function (req, res) {
   try {
     let services = await serviceController.GetServicesByPetType(
@@ -35,7 +35,6 @@ router.get("/pet-type/:petTypeId", async function (req, res) {
   }
 });
 
-// ADMIN only - Get paginated services for management
 router.get(
   "/paginated",
   CheckLogin,
@@ -74,7 +73,6 @@ router.get(
   },
 );
 
-// ADMIN only - Get deleted services
 router.get(
   "/deleted",
   CheckLogin,
@@ -107,7 +105,7 @@ router.get(
   },
 );
 
-// ADMIN only - Toggle active status
+
 router.patch(
   "/toggle-active",
   CheckLogin,
@@ -135,7 +133,7 @@ router.patch(
   },
 );
 
-// ADMIN only - Soft delete service
+
 router.patch(
   "/soft-delete",
   CheckLogin,
@@ -163,7 +161,6 @@ router.patch(
   },
 );
 
-// ADMIN only - Restore deleted service
 router.patch(
   "/restore",
   CheckLogin,
@@ -191,7 +188,6 @@ router.patch(
   },
 );
 
-// ADMIN only - Get service by ID (for management) - MUST be after specific routes
 router.get("/:id", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     const service = await serviceController.GetServiceById(req.params.id);
@@ -207,7 +203,7 @@ router.get("/:id", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   }
 });
 
-// ADMIN only - Create new service
+
 router.post("/", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     const service = await serviceController.CreateService(req.body);
@@ -224,7 +220,7 @@ router.post("/", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   }
 });
 
-// ADMIN only - Update service
+
 router.put("/", CheckLogin, checkRole("ADMIN"), async function (req, res) {
   try {
     if (!req.body.id) {

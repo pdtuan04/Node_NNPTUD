@@ -3,7 +3,7 @@ var router = express.Router();
 let staffController = require("../controllers/staff");
 let { CheckLogin, checkRole } = require("../utils/authHandler");
 
-// Get all staff with pagination, search, and sort
+
 router.get(
   "/paginated",
   CheckLogin,
