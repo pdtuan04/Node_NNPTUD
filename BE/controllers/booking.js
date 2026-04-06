@@ -58,9 +58,9 @@ module.exports = {
             let expectedEndTime = new Date(scheduledAt.getTime() + totalMinutes * 60000);
 
             let startOfDay = new Date(scheduledAt);
-            startOfDay.setHours(0, 0, 0, 0);
+            startOfDay.setHours(config.openingHour, 0, 0, 0);
             let endOfDay = new Date(startOfDay);
-            endOfDay.setDate(endOfDay.getDate() + 1);
+            endOfDay.setHours(config.closingHour, 0, 0, 0);
 
             let bookingsInDay = await bookingModel.find({
                 scheduledAt: { $gte: startOfDay, $lt: endOfDay },
@@ -280,9 +280,9 @@ module.exports = {
             let totalMinutes = services.reduce((sum, s) => sum + s.durationInMinutes, 0);
             let expectedEndTime = new Date(scheduledAt.getTime() + totalMinutes * 60000);
             let startOfDay = new Date(scheduledAt);
-            startOfDay.setHours(0, 0, 0, 0);
+            startOfDay.setHours(config.openingHour, 0, 0, 0);
             let endOfDay = new Date(startOfDay);
-            endOfDay.setDate(endOfDay.getDate() + 1);
+            endOfDay.setHours(config.closingHour, 0, 0, 0);
 
             let bookingsInDay = await bookingModel.find({
                 scheduledAt: { $gte: startOfDay, $lt: endOfDay },
