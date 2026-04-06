@@ -93,8 +93,10 @@ const PetCareHistoryManagement = () => {
   };
 
   const fetchBookingDetail = async (bookingId) => {
+    const token = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user"))?.token : null;
     const res = await fetch(`http://localhost:8080/api/bookings/${bookingId}`, {
       credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.success) {
